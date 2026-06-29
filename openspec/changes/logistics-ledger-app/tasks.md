@@ -4,7 +4,7 @@
 
 ## 1. 项目脚手架与基础设施
 
-- [ ] 1.1 创建 Flutter 工程，配置 Android 构建，确认本机可出 debug apk（待装 Flutter 后 `flutter create --platforms=android .`，见 README）
+- [x] 1.1 配置 Android 构建并成功出包（采用 Codemagic 云端构建，`codemagic.yaml` 中 `flutter create` 生成脚手架 → 设 minSdk 21 → 关闭 R8 → 出 release apk）
 - [x] 1.2 添加依赖：sqflite/path/path_provider、`google_mlkit_text_recognition`、`image_picker`、`csv`、`share_plus`、`flutter_riverpod`（pubspec.yaml）
 - [x] 1.3 搭建分层目录结构（models / data / services / state / ui）与应用入口、主题、底部导航
 - [x] 1.4 实现金额工具：元↔分（整数）转换与显示格式化（lib/services/money.dart）
