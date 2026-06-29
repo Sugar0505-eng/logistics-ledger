@@ -42,3 +42,39 @@ workflows:
     #   email:
     #     recipients:
     #       - enyu734@gmail.com
+
+  ios-build:
+    name: iOS（仅编译，不签名）
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+    scripts:
+      - name: 生成 iOS 平台脚手架（不覆盖已有 lib/ 与 pubspec.yaml）
+        script: |
+          flutter create --platforms=ios --project-name logistics_ledger .
+      - name: 将 iOS 最低版本提升到 15.5（ML Kit 要求）
+        script: |
+          # Podfile：设定平台版本（兼容已注释/未注释的写法）
+          perl -pi -e "s/^#?\s*platform :ios.*/platform :ios, '15.5'/g" ios/Podfile
+          # Xcode 工程：提升部署目标
+          perl -pi -e 's/IPHONEOS_DEPLOYMENT_TARGET = [\d.]+;/IPHONEOS_DEPLOYMENT_TARGET = 15.5;/g' ios/Runner.xcodeproj/project.pbxproj
+      - name: 拉取依赖
+        script: flutter pub get
+      - name: 运行单元测试
+        script: flutter test
+      - name: 构建 iOS（不签名）
+        script: |
+          flutter build ios --release --no-codesign
+      - name: 打包未签名产物（仅供验证编译，无法安装到 iPhone）
+        script: |
+          APP=$(find build/ios/iphoneos -maxdepth 1 -name '*.app' | head -1)
+          if [ -n "$APP" ]; then
+            mkdir -p build/ios/unsigned/Payload
+            cp -r "$APP" build/ios/unsigned/Payload/
+            cd build/ios/unsigned && zip -qr app-unsigned.ipa Payload
+          fi
+    artifacts:
+      - build/ios/unsigned/*.ipa
