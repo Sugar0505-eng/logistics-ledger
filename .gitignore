@@ -1,0 +1,28 @@
+# Flutter / Dart
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+pubspec.lock
+
+# 平台脚手架（由 CI 的 flutter create 生成，不入库）
+/android/
+/ios/
+/linux/
+/macos/
+/windows/
+/web/
+
+# IDE / 本地工具
+.idea/
+.vscode/
+*.iml
+.metadata
+.claude/
+.codegraph/
+
+# 本地
+*.log

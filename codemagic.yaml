@@ -1,0 +1,27 @@
+workflows:
+  android-build:
+    name: Android APK
+    instance_type: linux_x2
+    max_build_duration: 60
+    environment:
+      flutter: stable
+    scripts:
+      - name: 生成 Android 平台脚手架（不覆盖已有 lib/ 与 pubspec.yaml）
+        script: |
+          flutter create --platforms=android --project-name logistics_ledger .
+      - name: 将 minSdk 提升到 21（ML Kit 要求）
+        script: |
+          sed -i 's/flutter.minSdkVersion/21/g' android/app/build.gradle android/app/build.gradle.kts 2>/dev/null || true
+      - name: 拉取依赖
+        script: flutter pub get
+      - name: 运行单元测试（失败则中止构建）
+        script: flutter test
+      - name: 构建 Release APK
+        script: flutter build apk --release
+    artifacts:
+      - build/**/outputs/**/*.apk
+    # 如需构建完成后邮件收到 apk，取消下面注释并填入你的邮箱：
+    # publishing:
+    #   email:
+    #     recipients:
+    #       - enyu734@gmail.com
