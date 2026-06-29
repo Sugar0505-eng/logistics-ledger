@@ -11,7 +11,24 @@ workflows:
           flutter create --platforms=android --project-name logistics_ledger .
       - name: 将 minSdk 提升到 21（ML Kit 要求）
         script: |
-          sed -i 's/flutter.minSdkVersion/21/g' android/app/build.gradle android/app/build.gradle.kts 2>/dev/null || true
+          for f in android/app/build.gradle android/app/build.gradle.kts; do
+            [ -f "$f" ] && perl -pi -e 's/flutter\.minSdkVersion/21/g' "$f"
+          done
+      - name: 关闭 R8 代码压缩并为 ML Kit 添加 keep 规则
+        script: |
+          # 关闭 minify / resource shrink（兼容 Kotlin DSL 与 Groovy）
+          for f in android/app/build.gradle.kts android/app/build.gradle; do
+            [ -f "$f" ] && perl -pi -e \
+              's/isMinifyEnabled = true/isMinifyEnabled = false/g; s/isShrinkResources = true/isShrinkResources = false/g; s/minifyEnabled true/minifyEnabled false/g; s/shrinkResources true/shrinkResources false/g' \
+              "$f"
+          done
+          # 即便仍启用压缩，也忽略未使用的其它语种识别器缺失类
+          printf '%s\n' \
+            '-dontwarn com.google.mlkit.vision.text.chinese.**' \
+            '-dontwarn com.google.mlkit.vision.text.devanagari.**' \
+            '-dontwarn com.google.mlkit.vision.text.japanese.**' \
+            '-dontwarn com.google.mlkit.vision.text.korean.**' \
+            >> android/app/proguard-rules.pro
       - name: 拉取依赖
         script: flutter pub get
       - name: 运行单元测试（失败则中止构建）
