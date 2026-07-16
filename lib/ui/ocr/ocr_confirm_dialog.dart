@@ -6,7 +6,9 @@ import '../../services/ocr_service.dart';
 /// 展示 OCR 识别结果，让用户确认或修改候选柜号。
 /// 返回确认后的柜号；取消返回 null。
 Future<String?> showOcrConfirmDialog(
-    BuildContext context, OcrResult result) async {
+  BuildContext context,
+  OcrResult result,
+) async {
   return showDialog<String>(
     context: context,
     builder: (ctx) => _OcrConfirmDialog(result: result),
@@ -22,8 +24,9 @@ class _OcrConfirmDialog extends StatefulWidget {
 }
 
 class _OcrConfirmDialogState extends State<_OcrConfirmDialog> {
-  late final TextEditingController _controller =
-      TextEditingController(text: widget.result.best ?? '');
+  late final TextEditingController _controller = TextEditingController(
+    text: widget.result.best ?? '',
+  );
 
   @override
   void dispose() {
@@ -35,6 +38,7 @@ class _OcrConfirmDialogState extends State<_OcrConfirmDialog> {
   Widget build(BuildContext context) {
     final candidates = widget.result.candidates;
     final noCandidate = candidates.isEmpty;
+    final valid = ContainerNumber.isValid(_controller.text);
 
     return AlertDialog(
       title: const Text('确认柜号'),
@@ -44,8 +48,10 @@ class _OcrConfirmDialogState extends State<_OcrConfirmDialog> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (noCandidate)
-              const Text('未识别到合法柜号，请手动输入。',
-                  style: TextStyle(color: Colors.orange))
+              const Text(
+                '未识别到符合格式的柜号，请手动输入。',
+                style: TextStyle(color: Colors.orange),
+              )
             else ...[
               const Text('识别到以下候选，请确认或修改：'),
               const SizedBox(height: 8),
@@ -62,7 +68,7 @@ class _OcrConfirmDialogState extends State<_OcrConfirmDialog> {
               textCapitalization: TextCapitalization.characters,
               decoration: const InputDecoration(
                 labelText: '柜号',
-                helperText: 'ISO 6346：4 字母 + 7 数字',
+                helperText: 'ISO 6346：3 个字母 + U/J/Z + 7 个数字',
               ),
               onChanged: (_) => setState(() {}),
             ),
@@ -73,11 +79,16 @@ class _OcrConfirmDialogState extends State<_OcrConfirmDialog> {
       ),
       actions: [
         TextButton(
-            onPressed: () => Navigator.pop(context), child: const Text('取消')),
+          onPressed: () => Navigator.pop(context),
+          child: const Text('取消'),
+        ),
         FilledButton(
-          onPressed: _controller.text.trim().isEmpty
-              ? null
-              : () => Navigator.pop(context, _controller.text.trim().toUpperCase()),
+          onPressed: valid
+              ? () => Navigator.pop(
+                  context,
+                  _controller.text.trim().toUpperCase(),
+                )
+              : null,
           child: const Text('确认'),
         ),
       ],
@@ -86,8 +97,11 @@ class _OcrConfirmDialogState extends State<_OcrConfirmDialog> {
 }
 
 class _CandidateChip extends StatelessWidget {
-  const _CandidateChip(
-      {required this.text, required this.valid, required this.onTap});
+  const _CandidateChip({
+    required this.text,
+    required this.valid,
+    required this.onTap,
+  });
   final String text;
   final bool valid;
   final VoidCallback onTap;
@@ -117,14 +131,27 @@ class _ValidationHint extends StatelessWidget {
   Widget build(BuildContext context) {
     final v = value.trim();
     if (v.isEmpty) return const SizedBox.shrink();
-    final valid = ContainerNumber.isValid(v);
+    final validFormat = ContainerNumber.hasValidFormat(v);
+    final valid = validFormat && ContainerNumber.isValid(v);
+    final message = !validFormat
+        ? '格式应为 3 个字母 + U/J/Z + 7 个数字'
+        : valid
+        ? '校验通过'
+        : '校验码不正确，请核对';
     return Row(
       children: [
-        Icon(valid ? Icons.check_circle : Icons.error_outline,
-            color: valid ? Colors.green : Colors.orange, size: 18),
+        Icon(
+          valid ? Icons.check_circle : Icons.error_outline,
+          color: valid ? Colors.green : Colors.orange,
+          size: 18,
+        ),
         const SizedBox(width: 6),
-        Text(valid ? '校验通过' : '校验未通过，请核对',
-            style: TextStyle(color: valid ? Colors.green : Colors.orange)),
+        Expanded(
+          child: Text(
+            message,
+            style: TextStyle(color: valid ? Colors.green : Colors.orange),
+          ),
+        ),
       ],
     );
   }

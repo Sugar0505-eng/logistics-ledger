@@ -28,12 +28,9 @@ class _HomePageState extends State<HomePage> {
         selectedIndex: _index,
         onDestinationSelected: (i) => setState(() => _index = i),
         destinations: const [
-          NavigationDestination(
-              icon: Icon(Icons.receipt_long), label: '账目'),
-          NavigationDestination(
-              icon: Icon(Icons.directions_car), label: '车牌'),
-          NavigationDestination(
-              icon: Icon(Icons.sell), label: '费用预设'),
+          NavigationDestination(icon: Icon(Icons.receipt_long), label: '账目'),
+          NavigationDestination(icon: Icon(Icons.directions_car), label: '车牌'),
+          NavigationDestination(icon: Icon(Icons.sell), label: '费用预设'),
         ],
       ),
     );

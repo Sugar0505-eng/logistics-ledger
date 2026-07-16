@@ -6,8 +6,7 @@ void main() {
     test('整数元', () => expect(Money.parseToCents('1500'), 150000));
     test('一位小数', () => expect(Money.parseToCents('1500.5'), 150050));
     test('两位小数', () => expect(Money.parseToCents('1500.50'), 150050));
-    test('含逗号与空格', () =>
-        expect(Money.parseToCents(' 1,500.50 '), 150050));
+    test('含逗号与空格', () => expect(Money.parseToCents(' 1,500.50 '), 150050));
     test('零', () => expect(Money.parseToCents('0'), 0));
     test('非法输入返回 null', () {
       expect(Money.parseToCents(''), isNull);

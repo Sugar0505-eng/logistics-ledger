@@ -1,10 +1,10 @@
-> 说明：本机未安装 Flutter，故采用"先写全部源码、后构建验证"策略。
-> 已写好的源码标记为完成；需要 Flutter 工具链才能完成的构建/验证项保持未勾选。
-> 实现偏差：数据层改用 `sqflite`（纯 SQL）替代 `drift`，原因见 design.md 决策 2。
+> 当前已使用 Flutter 3.44.6 / Dart 3.12.2 完成本地格式、静态分析与测试验证。
+> Android/iOS 平台工程及 `pubspec.lock` 已纳入版本控制；真机与 Excel 验收仍保持未勾选。
+> 实现偏差：数据层使用 `sqflite`（纯 SQL）替代 `drift`，原因见 design.md 决策 2。
 
 ## 1. 项目脚手架与基础设施
 
-- [x] 1.1 配置 Android 构建并成功出包（采用 Codemagic 云端构建，`codemagic.yaml` 中 `flutter create` 生成脚手架 → 设 minSdk 21 → 关闭 R8 → 出 release apk）
+- [x] 1.1 生成并提交 Android/iOS 平台工程；Android minSdk 24，iOS 最低 15.5，Codemagic 使用锁定依赖直接构建
 - [x] 1.2 添加依赖：sqflite/path/path_provider、`google_mlkit_text_recognition`、`image_picker`、`csv`、`share_plus`、`flutter_riverpod`（pubspec.yaml）
 - [x] 1.3 搭建分层目录结构（models / data / services / state / ui）与应用入口、主题、底部导航
 - [x] 1.4 实现金额工具：元↔分（整数）转换与显示格式化（lib/services/money.dart）
@@ -55,5 +55,5 @@
 
 - [ ] 8.1 端到端走查：建账目记录 → 拍照识别柜号 → 录账单+额外费用 → 导出 CSV
 - [ ] 8.2 用 Excel 打开导出 CSV 核对动态列、中文显示与金额小数正确
-- [ ] 8.3 校验各 spec 场景（唯一性、级联删除、校验失败提醒、空导出等）+ `flutter test`
+- [x] 8.3 校验各 spec 场景（唯一性、级联删除、校验失败提醒、空导出等）+ `flutter test`（32 项通过）
 - [ ] 8.4 出 release apk 在真机安装验证

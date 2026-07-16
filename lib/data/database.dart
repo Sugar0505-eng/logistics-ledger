@@ -1,14 +1,20 @@
 import 'package:path/path.dart' as p;
-import 'package:sqflite/sqflite.dart';
+import 'package:sqflite/sqflite.dart' as sqflite;
 
 /// 本地 SQLite 数据库封装。负责建表、外键、级联删除。
 class AppDatabase {
-  AppDatabase({this.fileName = 'logistics_ledger.db'});
+  AppDatabase({
+    this.fileName = 'logistics_ledger.db',
+    this.databaseFactory,
+    this.databasePath,
+  });
 
   final String fileName;
-  Database? _db;
+  final sqflite.DatabaseFactory? databaseFactory;
+  final String? databasePath;
+  sqflite.Database? _db;
 
-  Database get db {
+  sqflite.Database get db {
     final d = _db;
     if (d == null) {
       throw StateError('AppDatabase 未初始化，请先调用 init()');
@@ -17,20 +23,22 @@ class AppDatabase {
   }
 
   Future<void> init() async {
-    final dir = await getDatabasesPath();
-    final path = p.join(dir, fileName);
-    _db = await openDatabase(
+    final factory = databaseFactory ?? sqflite.databaseFactory;
+    final path =
+        databasePath ?? p.join(await factory.getDatabasesPath(), fileName);
+    _db = await factory.openDatabase(
       path,
-      version: 1,
-      onConfigure: (db) async {
-        // 启用外键，使级联删除生效
-        await db.execute('PRAGMA foreign_keys = ON');
-      },
-      onCreate: _onCreate,
+      options: sqflite.OpenDatabaseOptions(
+        version: 1,
+        onConfigure: (db) async {
+          await db.execute('PRAGMA foreign_keys = ON');
+        },
+        onCreate: _onCreate,
+      ),
     );
   }
 
-  Future<void> _onCreate(Database db, int version) async {
+  Future<void> _onCreate(sqflite.Database db, int version) async {
     await db.execute('''
       CREATE TABLE plates (
         id INTEGER PRIMARY KEY AUTOINCREMENT,

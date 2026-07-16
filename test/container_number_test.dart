@@ -20,6 +20,12 @@ void main() {
       expect(ContainerNumber.isValid('ABC123'), isFalse);
       expect(ContainerNumber.isValid('CSQU30543830'), isFalse);
     });
+
+    test('第四位必须是 ISO 6346 类别码', () {
+      expect(ContainerNumber.hasValidFormat('ABCA1234560'), isFalse);
+      expect(ContainerNumber.computeCheckDigit('ABCA123456'), isNull);
+      expect(ContainerNumber.hasValidFormat('ABCU1234560'), isTrue);
+    });
   });
 
   group('从文本提取候选柜号', () {
@@ -39,6 +45,10 @@ void main() {
 
     test('无合法格式返回空', () {
       expect(ContainerNumber.extractCandidates('no container here'), isEmpty);
+    });
+
+    test('不提取类别码无效的候选', () {
+      expect(ContainerNumber.extractCandidates('ABCA1234560'), isEmpty);
     });
   });
 }

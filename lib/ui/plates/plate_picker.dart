@@ -22,13 +22,16 @@ class _PlatePickerSheet extends ConsumerWidget {
     return SafeArea(
       child: Padding(
         padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom),
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              title: const Text('选择车牌',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
+              title: const Text(
+                '选择车牌',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
               trailing: TextButton.icon(
                 icon: const Icon(Icons.add),
                 label: const Text('新建'),
@@ -38,10 +41,14 @@ class _PlatePickerSheet extends ConsumerWidget {
             const Divider(height: 1),
             Flexible(
               child: platesAsync.when(
-                loading: () =>
-                    const Padding(padding: EdgeInsets.all(24), child: CircularProgressIndicator()),
+                loading: () => const Padding(
+                  padding: EdgeInsets.all(24),
+                  child: CircularProgressIndicator(),
+                ),
                 error: (e, _) => Padding(
-                    padding: const EdgeInsets.all(24), child: Text('加载失败：$e')),
+                  padding: const EdgeInsets.all(24),
+                  child: Text('加载失败：$e'),
+                ),
                 data: (plates) {
                   if (plates.isEmpty) {
                     return const Padding(
@@ -83,10 +90,13 @@ class _PlatePickerSheet extends ConsumerWidget {
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('取消'),
+          ),
           FilledButton(
-              onPressed: () => Navigator.pop(ctx, controller.text.trim()),
-              child: const Text('确定')),
+            onPressed: () => Navigator.pop(ctx, controller.text.trim()),
+            child: const Text('确定'),
+          ),
         ],
       ),
     );
@@ -99,8 +109,9 @@ class _PlatePickerSheet extends ConsumerWidget {
     ref.invalidate(platesProvider);
     if (!context.mounted) return;
     if (existed) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('车牌已存在，已为你选中：${plate.number}')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('车牌已存在，已为你选中：${plate.number}')));
     }
     Navigator.pop(context, plate.number);
   }

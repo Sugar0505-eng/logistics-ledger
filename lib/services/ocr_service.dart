@@ -6,8 +6,9 @@ import 'container_number.dart';
 /// 端上 OCR 服务：拍照/选图 → ML Kit 离线文字识别 → 提取候选柜号。
 class OcrService {
   final ImagePicker _picker = ImagePicker();
-  final TextRecognizer _recognizer =
-      TextRecognizer(script: TextRecognitionScript.latin);
+  final TextRecognizer _recognizer = TextRecognizer(
+    script: TextRecognitionScript.latin,
+  );
 
   /// 拍照或从相册选图并识别，返回候选柜号（校验通过者在前）。
   /// 用户取消选图返回 null。

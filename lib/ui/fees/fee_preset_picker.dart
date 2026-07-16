@@ -23,8 +23,10 @@ class _FeePresetPickerSheet extends ConsumerWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           const ListTile(
-            title: Text('选择费用名称',
-                style: TextStyle(fontWeight: FontWeight.bold)),
+            title: Text(
+              '选择费用名称',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
           ),
           ListTile(
             leading: const Icon(Icons.keyboard),
@@ -35,10 +37,13 @@ class _FeePresetPickerSheet extends ConsumerWidget {
           Flexible(
             child: presetsAsync.when(
               loading: () => const Padding(
-                  padding: EdgeInsets.all(24),
-                  child: CircularProgressIndicator()),
+                padding: EdgeInsets.all(24),
+                child: CircularProgressIndicator(),
+              ),
               error: (e, _) => Padding(
-                  padding: const EdgeInsets.all(24), child: Text('加载失败：$e')),
+                padding: const EdgeInsets.all(24),
+                child: Text('加载失败：$e'),
+              ),
               data: (presets) {
                 if (presets.isEmpty) {
                   return const Padding(

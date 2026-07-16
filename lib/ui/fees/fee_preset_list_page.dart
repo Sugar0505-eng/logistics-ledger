@@ -54,7 +54,10 @@ class FeePresetListPage extends ConsumerWidget {
   }
 
   Future<void> _edit(
-      BuildContext context, WidgetRef ref, FeePreset? preset) async {
+    BuildContext context,
+    WidgetRef ref,
+    FeePreset? preset,
+  ) async {
     final controller = TextEditingController(text: preset?.name ?? '');
     final result = await showDialog<String>(
       context: context,
@@ -67,7 +70,9 @@ class FeePresetListPage extends ConsumerWidget {
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('取消'),
+          ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, controller.text.trim()),
             child: const Text('保存'),
@@ -87,14 +92,18 @@ class FeePresetListPage extends ConsumerWidget {
       ref.invalidate(feePresetsProvider);
     } on DuplicateException catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(e.message)));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.message)));
       }
     }
   }
 
   Future<void> _delete(
-      BuildContext context, WidgetRef ref, FeePreset preset) async {
+    BuildContext context,
+    WidgetRef ref,
+    FeePreset preset,
+  ) async {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -102,11 +111,13 @@ class FeePresetListPage extends ConsumerWidget {
         content: Text('确定删除「${preset.name}」？已写入账单的同名费用不受影响。'),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('取消')),
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('取消'),
+          ),
           FilledButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('删除')),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('删除'),
+          ),
         ],
       ),
     );

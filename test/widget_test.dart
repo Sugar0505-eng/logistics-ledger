@@ -1,14 +1,61 @@
-// 占位冒烟测试，替代 `flutter create` 生成的默认计数器模板（其引用不存在的 MyApp）。
-// 应用真正的入口是 LogisticsLedgerApp，其依赖已初始化的数据库，不适合在此处直接 pump。
-// 业务核心逻辑的验证见 container_number_test / money_test / csv_exporter_test。
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:logistics_ledger/data/database.dart';
+import 'package:logistics_ledger/data/repositories.dart';
+import 'package:logistics_ledger/state/providers.dart';
+import 'package:logistics_ledger/ui/home_page.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 void main() {
-  testWidgets('MaterialApp 能正常构建', (tester) async {
-    await tester.pumpWidget(
-      const MaterialApp(home: Scaffold(body: Center(child: Text('物流账目')))),
+  setUpAll(sqfliteFfiInit);
+
+  testWidgets('用户可以编辑账目名称并标记为已完成', (tester) async {
+    final database = AppDatabase(
+      databaseFactory: databaseFactoryFfiNoIsolate,
+      databasePath: inMemoryDatabasePath,
     );
-    expect(find.text('物流账目'), findsOneWidget);
+    await database.init();
+    addTearDown(database.close);
+    await LedgerRepository(
+      database,
+    ).createLedger(name: '七月批次', createdAt: '2026-07-16');
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [databaseProvider.overrideWithValue(database)],
+        child: const MaterialApp(home: HomePage()),
+      ),
+    );
+    await _pumpUntilFound(tester, find.text('七月批次'));
+
+    expect(find.text('七月批次'), findsOneWidget);
+    expect(find.text('编辑中'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('账目操作'));
+    await tester.pumpAndSettle();
+    final editMenuItem = find.ancestor(
+      of: find.text('编辑'),
+      matching: find.byWidgetPredicate((widget) => widget is PopupMenuItem),
+    );
+    await tester.tap(editMenuItem);
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), '七月已结批次');
+    await tester.tap(find.text('已完成'));
+    await tester.tap(find.text('保存'));
+    await _pumpUntilFound(tester, find.text('七月已结批次'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('七月已结批次'), findsOneWidget);
+    expect(find.text('已完成'), findsOneWidget);
   });
+}
+
+Future<void> _pumpUntilFound(WidgetTester tester, Finder finder) async {
+  for (var i = 0; i < 50; i++) {
+    await tester.pump(const Duration(milliseconds: 100));
+    if (finder.evaluate().isNotEmpty) return;
+  }
+  throw TestFailure('等待控件超时：$finder');
 }

@@ -1,84 +1,71 @@
 # 物流账目管理 App（logistics_ledger）
 
-跨平台（Flutter）移动端账目记录工具，**首期仅 Android**、纯本地、无后端、无账号。
+Flutter 移动端物流账单记录工具。Android 为首要交付平台，数据与 OCR 均在设备本地处理，无后端、无账号。
 
 ## 功能
 
-- 车牌库管理（仅存车牌号，唯一性校验）
-- 账目记录 ▷ 账单（单柜号）▷ 额外费用 三层结构
-- 物流柜号端上 OCR 识别（Google ML Kit，离线）+ ISO 6346 校验 + 确认框
-- 额外费用预设，录入时可选或手输
-- 金额支持小数（内部以"分"整数存储）
-- 按单个账目记录导出 CSV（额外费用动态成列，UTF-8 含 BOM）
+- 车牌库管理与唯一性校验
+- 账目记录、账单、额外费用三层结构
+- 账目名称编辑与“编辑中/已完成”状态管理
+- Google ML Kit 端上 OCR + ISO 6346 柜号格式和校验码验证
+- 额外费用预设，录入时可选择或手动输入
+- 金额以整数分存储，显示和导出时格式化为两位小数
+- 单个账目记录导出 CSV，额外费用动态成列，UTF-8 含 BOM
 
-## 这个仓库现在缺什么
+## 环境要求
 
-源码已写好，但**平台脚手架（android/ 目录等）尚未生成**，因为本机未安装 Flutter。
-按下面步骤一次性补齐即可运行。
+- Flutter stable 3.44 或更高
+- Dart 3.12 或更高
+- Android SDK 24 或更高
+- iOS 15.5 或更高（仅可在 macOS + Xcode 上构建）
 
-## 首次构建步骤
+项目已提交 Android/iOS 平台工程和 `pubspec.lock`，构建不再临时生成平台脚手架。
 
-> 前置：安装 [Flutter SDK](https://docs.flutter.dev/get-started/install/windows) 与
-> Android Studio（含 Android SDK + JDK）。安装后 `flutter doctor` 应全绿（iOS 部分可忽略）。
-
-1. 生成 Android 平台脚手架（不会覆盖已有的 `lib/`、`pubspec.yaml`）：
-   ```bash
-   flutter create --platforms=android --project-name logistics_ledger .
-   ```
-
-2. 拉取依赖：
-   ```bash
-   flutter pub get
-   ```
-
-3. 设置 ML Kit 所需的最低 SDK：编辑 `android/app/build.gradle`，
-   将 `minSdkVersion` 改为 **21** 或更高：
-   ```gradle
-   defaultConfig {
-       minSdkVersion 21
-   }
-   ```
-
-4. （相机识别需要）在 `android/app/src/main/AndroidManifest.xml` 的
-   `<manifest>` 内补充相机权限：
-   ```xml
-   <uses-permission android:name="android.permission.CAMERA"/>
-   ```
-
-5. 运行 / 出包：
-   ```bash
-   flutter run                # 连真机或模拟器调试
-   flutter build apk --release  # 产出 build/app/outputs/flutter-apk/app-release.apk
-   ```
-
-## 跑测试（无需设备，可立即验证核心逻辑）
+## 本地验证
 
 ```bash
+flutter pub get --enforce-lockfile
+dart format --output=none --set-exit-if-changed lib test
+flutter analyze
 flutter test
 ```
 
-覆盖：ISO 6346 校验码、金额分/元转换、CSV 动态列与合计。
+连接 Android 真机或启动模拟器后：
+
+```bash
+flutter run
+flutter build apk --release
+```
+
+未配置 `android/key.properties` 时，Release APK 使用调试密钥，适合内部验证但不可用于正式发布。正式发布前创建上传密钥，并以 `android/key.properties.example` 为模板配置本机 `android/key.properties`；密钥和密码文件均不得提交到 Git。
 
 ## 代码结构
 
-```
+```text
 lib/
-  main.dart                 应用入口（初始化 DB + Riverpod）
+  main.dart                 应用入口（初始化数据库 + Riverpod）
   models/models.dart        领域模型（金额=分，日期=yyyy-MM-dd）
   data/
-    database.dart           SQLite 建表、外键、级联删除
-    repositories.dart       车牌/费用预设/账目记录 仓储
+    database.dart           SQLite 建表、外键与级联删除
+    repositories.dart       车牌、费用预设、账目和账单仓储
   services/
-    money.dart              分↔元 转换与格式化
-    container_number.dart   ISO 6346 提取与校验（纯逻辑）
-    csv_exporter.dart       CSV 动态列生成（含 BOM）
+    money.dart              分/元转换与格式化
+    container_number.dart   ISO 6346 提取与校验
+    csv_exporter.dart       CSV 动态列生成
     ocr_service.dart        ML Kit 拍照/选图识别
   state/providers.dart      Riverpod providers
-  ui/                       页面与组件（账目/车牌/费用/OCR 确认）
-test/                       纯逻辑单元测试
+  ui/                       账目、车牌、费用与 OCR 页面
+test/                       单元、仓储与组件测试
+android/                    Android 工程与发布配置
+ios/                        iOS 工程、权限说明与 SwiftPM 配置
 ```
 
-## 关于 iOS
+## CI 与发布
 
-代码保持可移植，但 iOS 出包需要 macOS + Xcode（且分发 iPhone 需苹果开发者账号），
-首期不交付。将来可用 Codemagic 等云端 CI 构建 iOS 包，业务代码无需改动。
+`codemagic.yaml` 提供 Android APK、iOS 无签名编译和 TestFlight 三条工作流。所有工作流都会校验锁文件、格式、静态分析和测试，再进入构建。
+
+TestFlight 工作流需要在 Codemagic 中配置 App Store Connect 集成 `APP_STORE_CONNECT_KEY` 和 `com.sugar0505.logisticsledger` 的签名资料。Android 正式上架还需配置独立上传密钥；Google Play 推荐发布 AAB，而不是将内部测试 APK 直接上架。
+
+## 数据边界
+
+SQLite 数据仅保存在当前设备。CSV 可用于报表导出，但不是完整数据库备份，也不能恢复应用数据。正式承载业务数据前，应完成真机 OCR、Excel CSV、升级迁移和备份恢复验收。

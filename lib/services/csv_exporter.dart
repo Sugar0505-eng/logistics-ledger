@@ -31,15 +31,18 @@ class CsvExporter {
   /// 构建二维表（首行为表头）。金额格式化为两位小数字符串。
   static List<List<String>> buildRows(List<Bill> bills) {
     final feeCols = feeColumns(bills);
-    final header = <String>[
-      ..._fixedHeaders,
-      ...feeCols,
-      _totalHeader,
-    ];
+    final header = <String>[..._fixedHeaders, ...feeCols, _totalHeader];
 
     final rows = <List<String>>[header];
     for (final bill in bills) {
-      final feeByName = {for (final f in bill.extraFees) f.name: f.amountCents};
+      final feeByName = <String, int>{};
+      for (final fee in bill.extraFees) {
+        feeByName.update(
+          fee.name,
+          (amount) => amount + fee.amountCents,
+          ifAbsent: () => fee.amountCents,
+        );
+      }
       final row = <String>[
         bill.containerNo,
         bill.date,

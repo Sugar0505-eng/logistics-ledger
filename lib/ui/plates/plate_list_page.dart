@@ -67,7 +67,9 @@ class PlateListPage extends ConsumerWidget {
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('取消'),
+          ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, controller.text.trim()),
             child: const Text('保存'),
@@ -86,7 +88,7 @@ class PlateListPage extends ConsumerWidget {
       }
       ref.invalidate(platesProvider);
     } on DuplicateException catch (e) {
-      _toast(context, e.message);
+      if (context.mounted) _toast(context, e.message);
     }
   }
 
@@ -98,11 +100,13 @@ class PlateListPage extends ConsumerWidget {
         content: Text('确定删除 ${plate.number}？'),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('取消')),
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('取消'),
+          ),
           FilledButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('删除')),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('删除'),
+          ),
         ],
       ),
     );
@@ -113,7 +117,6 @@ class PlateListPage extends ConsumerWidget {
 
   void _toast(BuildContext context, String msg) {
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(msg)));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 }

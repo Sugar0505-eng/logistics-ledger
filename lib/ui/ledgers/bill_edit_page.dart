@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../models/models.dart';
+import '../../services/container_number.dart';
 import '../../services/money.dart';
 import '../../services/ocr_service.dart';
 import '../../state/providers.dart';
@@ -30,6 +31,7 @@ class _BillEditPageState extends ConsumerState<BillEditPage> {
   late String _date;
   String _plate = '';
   late List<_EditableFee> _fees;
+  bool _saving = false;
 
   bool get _isEdit => widget.bill != null;
 
@@ -39,15 +41,19 @@ class _BillEditPageState extends ConsumerState<BillEditPage> {
     final b = widget.bill;
     _containerCtrl = TextEditingController(text: b?.containerNo ?? '');
     _freightCtrl = TextEditingController(
-        text: b == null ? '' : Money.formatCents(b.freightCents));
+      text: b == null ? '' : Money.formatCents(b.freightCents),
+    );
     _date = b?.date ?? todayYmd();
     _plate = b?.plateNumber ?? '';
     _fees = (b?.extraFees ?? [])
-        .map((f) => _EditableFee(
-              name: f.name,
-              amountCtrl:
-                  TextEditingController(text: Money.formatCents(f.amountCents)),
-            ))
+        .map(
+          (f) => _EditableFee(
+            name: f.name,
+            amountCtrl: TextEditingController(
+              text: Money.formatCents(f.amountCents),
+            ),
+          ),
+        )
         .toList();
   }
 
@@ -93,8 +99,7 @@ class _BillEditPageState extends ConsumerState<BillEditPage> {
                   ],
                 ),
               ),
-              validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? '请输入或识别柜号' : null,
+              validator: _validateContainerNumber,
             ),
             const SizedBox(height: 16),
 
@@ -103,7 +108,9 @@ class _BillEditPageState extends ConsumerState<BillEditPage> {
               onTap: _pickDate,
               child: InputDecorator(
                 decoration: const InputDecoration(
-                    labelText: '日期', suffixIcon: Icon(Icons.calendar_today)),
+                  labelText: '日期',
+                  suffixIcon: Icon(Icons.calendar_today),
+                ),
                 child: Text(_date),
               ),
             ),
@@ -112,10 +119,13 @@ class _BillEditPageState extends ConsumerState<BillEditPage> {
             // 运费
             TextFormField(
               controller: _freightCtrl,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
               decoration: const InputDecoration(
-                  labelText: '运费', suffixText: '元'),
+                labelText: '运费',
+                suffixText: '元',
+              ),
               validator: _validateMoney,
             ),
             const SizedBox(height: 16),
@@ -125,7 +135,9 @@ class _BillEditPageState extends ConsumerState<BillEditPage> {
               onTap: _pickPlate,
               child: InputDecorator(
                 decoration: const InputDecoration(
-                    labelText: '车牌号', suffixIcon: Icon(Icons.directions_car)),
+                  labelText: '车牌号',
+                  suffixIcon: Icon(Icons.directions_car),
+                ),
                 child: Text(_plate.isEmpty ? '点击选择车牌' : _plate),
               ),
             ),
@@ -135,9 +147,10 @@ class _BillEditPageState extends ConsumerState<BillEditPage> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('额外费用',
-                    style:
-                        TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                const Text(
+                  '额外费用',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
                 TextButton.icon(
                   onPressed: _addFee,
                   icon: const Icon(Icons.add),
@@ -149,9 +162,14 @@ class _BillEditPageState extends ConsumerState<BillEditPage> {
 
             const SizedBox(height: 32),
             FilledButton.icon(
-              onPressed: _save,
-              icon: const Icon(Icons.save),
-              label: const Text('保存账单'),
+              onPressed: _saving ? null : _save,
+              icon: _saving
+                  ? const SizedBox.square(
+                      dimension: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.save),
+              label: Text(_saving ? '保存中' : '保存账单'),
             ),
           ],
         ),
@@ -180,10 +198,13 @@ class _BillEditPageState extends ConsumerState<BillEditPage> {
             flex: 2,
             child: TextFormField(
               controller: fee.amountCtrl,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-              decoration:
-                  const InputDecoration(labelText: '金额', suffixText: '元'),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              decoration: const InputDecoration(
+                labelText: '金额',
+                suffixText: '元',
+              ),
               validator: _validateMoney,
             ),
           ),
@@ -204,6 +225,16 @@ class _BillEditPageState extends ConsumerState<BillEditPage> {
     return null;
   }
 
+  String? _validateContainerNumber(String? value) {
+    final number = value?.trim() ?? '';
+    if (number.isEmpty) return '请输入或识别柜号';
+    if (!ContainerNumber.hasValidFormat(number)) {
+      return '柜号应为 3 个字母 + U/J/Z + 7 个数字';
+    }
+    if (!ContainerNumber.isValid(number)) return '柜号校验码不正确';
+    return null;
+  }
+
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
       context: context,
@@ -211,21 +242,23 @@ class _BillEditPageState extends ConsumerState<BillEditPage> {
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
     );
-    if (picked != null) setState(() => _date = ymd.format(picked));
+    if (picked != null && mounted) {
+      setState(() => _date = ymd.format(picked));
+    }
   }
 
   Future<void> _pickPlate() async {
     final result = await pickPlate(context, ref);
-    if (result != null) setState(() => _plate = result);
+    if (result != null && mounted) setState(() => _plate = result);
   }
 
   Future<void> _pickFeeName(int i) async {
     final result = await pickFeeName(context, ref);
-    if (result == null) return;
+    if (result == null || !mounted) return;
     if (result.isEmpty) {
       // 手动输入
       final name = await _promptText('输入费用名称');
-      if (name != null && name.isNotEmpty) {
+      if (name != null && name.isNotEmpty && mounted) {
         setState(() => _fees[i].name = name);
       }
     } else {
@@ -235,25 +268,35 @@ class _BillEditPageState extends ConsumerState<BillEditPage> {
 
   Future<String?> _promptText(String title) async {
     final ctrl = TextEditingController();
-    return showDialog<String>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(title),
-        content: TextField(controller: ctrl, autofocus: true),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
-          FilledButton(
+    try {
+      return await showDialog<String>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(title),
+          content: TextField(controller: ctrl, autofocus: true),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('取消'),
+            ),
+            FilledButton(
               onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
-              child: const Text('确定')),
-        ],
-      ),
-    );
+              child: const Text('确定'),
+            ),
+          ],
+        ),
+      );
+    } finally {
+      ctrl.dispose();
+    }
   }
 
   void _addFee() {
-    setState(() =>
-        _fees.add(_EditableFee(name: '', amountCtrl: TextEditingController())));
+    setState(
+      () => _fees.add(
+        _EditableFee(name: '', amountCtrl: TextEditingController()),
+      ),
+    );
   }
 
   Future<void> _runOcr(ImageSource source) async {
@@ -261,29 +304,40 @@ class _BillEditPageState extends ConsumerState<BillEditPage> {
       final result = await _ocr.pickAndRecognize(source);
       if (result == null || !mounted) return;
       final confirmed = await showOcrConfirmDialog(context, result);
-      if (confirmed != null) {
+      if (confirmed != null && mounted) {
         setState(() => _containerCtrl.text = confirmed);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('识别失败：$e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('识别失败：$e')));
       }
     }
   }
 
   Future<void> _save() async {
+    if (_saving) return;
     if (!_formKey.currentState!.validate()) return;
     if (_plate.isEmpty) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('请选择车牌号')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('请选择车牌号')));
       return;
     }
-    // 校验额外费用名称
+    final feeNames = <String>{};
     for (final f in _fees) {
-      if (f.name.trim().isEmpty) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('额外费用名称不能为空')));
+      final name = f.name.trim();
+      if (name.isEmpty) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('额外费用名称不能为空')));
+        return;
+      }
+      if (!feeNames.add(name.toLowerCase())) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('额外费用名称不能重复：$name')));
         return;
       }
     }
@@ -296,15 +350,27 @@ class _BillEditPageState extends ConsumerState<BillEditPage> {
       freightCents: Money.parseToCents(_freightCtrl.text)!,
       plateNumber: _plate,
       extraFees: _fees
-          .map((f) => ExtraFee(
-                name: f.name.trim(),
-                amountCents: Money.parseToCents(f.amountCtrl.text)!,
-              ))
+          .map(
+            (f) => ExtraFee(
+              name: f.name.trim(),
+              amountCents: Money.parseToCents(f.amountCtrl.text)!,
+            ),
+          )
           .toList(),
     );
 
-    await ref.read(ledgerRepoProvider).saveBill(bill);
-    if (mounted) Navigator.pop(context);
+    setState(() => _saving = true);
+    try {
+      await ref.read(ledgerRepoProvider).saveBill(bill);
+      if (mounted) Navigator.pop(context, true);
+    } catch (e) {
+      if (mounted) {
+        setState(() => _saving = false);
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('保存失败：$e')));
+      }
+    }
   }
 }
 

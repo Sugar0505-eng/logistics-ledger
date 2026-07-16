@@ -61,9 +61,13 @@ class LedgerDetailPage extends ConsumerWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text('共 ${bills.length} 条账单'),
-                      Text('总计 ${Money.formatCents(total)} 元',
-                          style: const TextStyle(
-                              fontWeight: FontWeight.bold, fontSize: 16)),
+                      Text(
+                        '总计 ${Money.formatCents(total)} 元',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -76,7 +80,10 @@ class LedgerDetailPage extends ConsumerWidget {
   }
 
   Future<void> _editBill(
-      BuildContext context, WidgetRef ref, Bill? bill) async {
+    BuildContext context,
+    WidgetRef ref,
+    Bill? bill,
+  ) async {
     await Navigator.push(
       context,
       MaterialPageRoute(
@@ -91,19 +98,23 @@ class LedgerDetailPage extends ConsumerWidget {
     final bills = await ref.read(ledgerRepoProvider).billsOf(ledgerId);
     if (bills.isEmpty) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('该账目记录无账单可导出')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('该账目记录无账单可导出')));
       }
       return;
     }
 
     final csv = CsvExporter.toCsv(bills);
     final dir = await getTemporaryDirectory();
-    final fileName = 'ledger_${ledgerId}_${DateTime.now().millisecondsSinceEpoch}.csv';
+    final fileName =
+        'ledger_${ledgerId}_${DateTime.now().millisecondsSinceEpoch}.csv';
     final file = File(p.join(dir.path, fileName));
     await file.writeAsString(csv);
 
-    await Share.shareXFiles([XFile(file.path)], subject: '账目导出 $fileName');
+    await SharePlus.instance.share(
+      ShareParams(files: [XFile(file.path)], subject: '账目导出 $fileName'),
+    );
   }
 }
 
@@ -120,19 +131,24 @@ class _BillTile extends ConsumerWidget {
     return ListTile(
       leading: const Icon(Icons.local_shipping),
       title: Text(bill.containerNo),
-      subtitle: Text([
-        '${bill.date} · ${bill.plateNumber}',
-        '运费 ${Money.formatCents(bill.freightCents)}',
-        if (feeSummary.isNotEmpty) '额外：$feeSummary',
-      ].join('\n')),
+      subtitle: Text(
+        [
+          '${bill.date} · ${bill.plateNumber}',
+          '运费 ${Money.formatCents(bill.freightCents)}',
+          if (feeSummary.isNotEmpty) '额外：$feeSummary',
+        ].join('\n'),
+      ),
       isThreeLine: feeSummary.isNotEmpty,
-      trailing: Text('${Money.formatCents(bill.subtotalCents)} 元',
-          style: const TextStyle(fontWeight: FontWeight.bold)),
+      trailing: Text(
+        '${Money.formatCents(bill.subtotalCents)} 元',
+        style: const TextStyle(fontWeight: FontWeight.bold),
+      ),
       onTap: () async {
         await Navigator.push(
           context,
           MaterialPageRoute(
-              builder: (_) => BillEditPage(ledgerId: ledgerId, bill: bill)),
+            builder: (_) => BillEditPage(ledgerId: ledgerId, bill: bill),
+          ),
         );
         ref.invalidate(billsProvider(ledgerId));
         ref.invalidate(billCountProvider(ledgerId));
@@ -149,11 +165,13 @@ class _BillTile extends ConsumerWidget {
         content: Text('确定删除柜号 ${bill.containerNo}？'),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('取消')),
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('取消'),
+          ),
           FilledButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('删除')),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('删除'),
+          ),
         ],
       ),
     );

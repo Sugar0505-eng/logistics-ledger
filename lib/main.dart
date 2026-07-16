@@ -26,10 +26,7 @@ class LogisticsLedgerApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: '物流账目',
-      theme: ThemeData(
-        colorSchemeSeed: Colors.indigo,
-        useMaterial3: true,
-      ),
+      theme: ThemeData(colorSchemeSeed: Colors.indigo, useMaterial3: true),
       home: const HomePage(),
     );
   }

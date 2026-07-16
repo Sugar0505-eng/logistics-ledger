@@ -9,20 +9,49 @@ class ContainerNumber {
 
   /// ISO 6346 字母数值映射。跳过 11 的倍数（11、22、33），因此 K=21 之后为 L=23。
   static const Map<String, int> _letterValues = {
-    'A': 10, 'B': 12, 'C': 13, 'D': 14, 'E': 15, 'F': 16, 'G': 17, 'H': 18,
-    'I': 19, 'J': 20, 'K': 21, 'L': 23, 'M': 24, 'N': 25, 'O': 26, 'P': 27,
-    'Q': 28, 'R': 29, 'S': 30, 'T': 31, 'U': 32, 'V': 34, 'W': 35, 'X': 36,
-    'Y': 37, 'Z': 38,
+    'A': 10,
+    'B': 12,
+    'C': 13,
+    'D': 14,
+    'E': 15,
+    'F': 16,
+    'G': 17,
+    'H': 18,
+    'I': 19,
+    'J': 20,
+    'K': 21,
+    'L': 23,
+    'M': 24,
+    'N': 25,
+    'O': 26,
+    'P': 27,
+    'Q': 28,
+    'R': 29,
+    'S': 30,
+    'T': 31,
+    'U': 32,
+    'V': 34,
+    'W': 35,
+    'X': 36,
+    'Y': 37,
+    'Z': 38,
   };
 
-  /// 完整柜号正则：4 字母 + 7 数字（含校验码）。
-  static final RegExp pattern = RegExp(r'[A-Z]{4}\d{7}');
+  /// 完整柜号正则：3 位所有者代码 + U/J/Z 类别码 + 7 位数字。
+  static final RegExp pattern = RegExp(r'[A-Z]{3}[UJZ]\d{7}');
+
+  static final RegExp _fullPattern = RegExp(r'^[A-Z]{3}[UJZ]\d{7}$');
+  static final RegExp _bodyPattern = RegExp(r'^[A-Z]{3}[UJZ]\d{6}$');
+
+  /// 是否符合 ISO 6346 的字符结构，不包含校验码验算。
+  static bool hasValidFormat(String number) =>
+      _fullPattern.hasMatch(number.trim().toUpperCase());
 
   /// 计算 ISO 6346 校验码（0-9）。要求 [code] 为 4 字母 + 6 数字（共 10 位）。
   /// 若格式不符返回 null。
   static int? computeCheckDigit(String code) {
-    final body = code.toUpperCase();
-    if (!RegExp(r'^[A-Z]{4}\d{6}$').hasMatch(body)) return null;
+    final body = code.trim().toUpperCase();
+    if (!_bodyPattern.hasMatch(body)) return null;
 
     var sum = 0;
     for (var i = 0; i < 10; i++) {
@@ -37,8 +66,8 @@ class ContainerNumber {
 
   /// 校验完整柜号（4 字母 + 7 数字）的校验码是否正确。
   static bool isValid(String number) {
-    final n = number.toUpperCase();
-    if (!RegExp(r'^[A-Z]{4}\d{7}$').hasMatch(n)) return false;
+    final n = number.trim().toUpperCase();
+    if (!_fullPattern.hasMatch(n)) return false;
     final expected = computeCheckDigit(n.substring(0, 10));
     if (expected == null) return false;
     return expected == int.parse(n[10]);
