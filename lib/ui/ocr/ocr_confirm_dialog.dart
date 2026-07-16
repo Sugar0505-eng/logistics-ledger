@@ -38,8 +38,6 @@ class _OcrConfirmDialogState extends State<_OcrConfirmDialog> {
   Widget build(BuildContext context) {
     final candidates = widget.result.candidates;
     final noCandidate = candidates.isEmpty;
-    final valid = ContainerNumber.isValid(_controller.text);
-
     return AlertDialog(
       title: const Text('确认柜号'),
       content: SingleChildScrollView(
@@ -66,14 +64,8 @@ class _OcrConfirmDialogState extends State<_OcrConfirmDialog> {
             TextField(
               controller: _controller,
               textCapitalization: TextCapitalization.characters,
-              decoration: const InputDecoration(
-                labelText: '柜号',
-                helperText: 'ISO 6346：3 个字母 + U/J/Z + 7 个数字',
-              ),
-              onChanged: (_) => setState(() {}),
+              decoration: const InputDecoration(labelText: '柜号'),
             ),
-            const SizedBox(height: 8),
-            _ValidationHint(value: _controller.text),
           ],
         ),
       ),
@@ -83,12 +75,8 @@ class _OcrConfirmDialogState extends State<_OcrConfirmDialog> {
           child: const Text('取消'),
         ),
         FilledButton(
-          onPressed: valid
-              ? () => Navigator.pop(
-                  context,
-                  _controller.text.trim().toUpperCase(),
-                )
-              : null,
+          onPressed: () =>
+              Navigator.pop(context, _controller.text.trim().toUpperCase()),
           child: const Text('确认'),
         ),
       ],
@@ -119,40 +107,6 @@ class _CandidateChip extends StatelessWidget {
         label: Text('$text  ${valid ? '校验通过' : '校验未通过'}'),
         onPressed: onTap,
       ),
-    );
-  }
-}
-
-class _ValidationHint extends StatelessWidget {
-  const _ValidationHint({required this.value});
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    final v = value.trim();
-    if (v.isEmpty) return const SizedBox.shrink();
-    final validFormat = ContainerNumber.hasValidFormat(v);
-    final valid = validFormat && ContainerNumber.isValid(v);
-    final message = !validFormat
-        ? '格式应为 3 个字母 + U/J/Z + 7 个数字'
-        : valid
-        ? '校验通过'
-        : '校验码不正确，请核对';
-    return Row(
-      children: [
-        Icon(
-          valid ? Icons.check_circle : Icons.error_outline,
-          color: valid ? Colors.green : Colors.orange,
-          size: 18,
-        ),
-        const SizedBox(width: 6),
-        Expanded(
-          child: Text(
-            message,
-            style: TextStyle(color: valid ? Colors.green : Colors.orange),
-          ),
-        ),
-      ],
     );
   }
 }

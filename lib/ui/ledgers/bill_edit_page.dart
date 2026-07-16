@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../models/models.dart';
-import '../../services/container_number.dart';
 import '../../services/money.dart';
 import '../../services/ocr_service.dart';
 import '../../state/providers.dart';
@@ -99,7 +98,6 @@ class _BillEditPageState extends ConsumerState<BillEditPage> {
                   ],
                 ),
               ),
-              validator: _validateContainerNumber,
             ),
             const SizedBox(height: 16),
 
@@ -222,16 +220,6 @@ class _BillEditPageState extends ConsumerState<BillEditPage> {
   String? _validateMoney(String? v) {
     if (v == null || v.trim().isEmpty) return '请输入金额';
     if (Money.parseToCents(v) == null) return '金额格式不正确';
-    return null;
-  }
-
-  String? _validateContainerNumber(String? value) {
-    final number = value?.trim() ?? '';
-    if (number.isEmpty) return '请输入或识别柜号';
-    if (!ContainerNumber.hasValidFormat(number)) {
-      return '柜号应为 3 个字母 + U/J/Z + 7 个数字';
-    }
-    if (!ContainerNumber.isValid(number)) return '柜号校验码不正确';
     return null;
   }
 

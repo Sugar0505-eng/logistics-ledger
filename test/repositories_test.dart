@@ -76,7 +76,7 @@ void main() {
     expect(await ledgers.billCount(ledger.id!), 1);
   });
 
-  test('非法柜号和重复费用名在写入前被拒绝', () async {
+  test('柜号不校验，重复费用名仍在写入前被拒绝', () async {
     final ledger = await ledgers.createLedger(createdAt: '2026-07-16');
 
     Future<int> save(String containerNo, List<ExtraFee> fees) {
@@ -92,7 +92,7 @@ void main() {
       );
     }
 
-    expect(() => save('ABC123', const []), throwsA(isA<ValidationException>()));
+    await save('ABC123', const []);
     expect(
       () => save('CSQU3054383', const [
         ExtraFee(name: '吊柜费', amountCents: 1000),
@@ -100,7 +100,7 @@ void main() {
       ]),
       throwsA(isA<ValidationException>()),
     );
-    expect(await ledgers.billCount(ledger.id!), 0);
+    expect(await ledgers.billCount(ledger.id!), 1);
   });
 
   test('删除账目会级联删除账单与额外费用', () async {

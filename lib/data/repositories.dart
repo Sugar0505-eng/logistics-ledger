@@ -1,7 +1,6 @@
 import 'package:sqflite/sqflite.dart';
 
 import '../models/models.dart';
-import '../services/container_number.dart';
 import 'database.dart';
 
 /// 车牌库仓储。
@@ -229,9 +228,6 @@ class LedgerRepository {
   void _validateBill(Bill bill) {
     if (bill.ledgerId == null) {
       throw ValidationException('账单必须关联账目记录');
-    }
-    if (!ContainerNumber.isValid(bill.containerNo)) {
-      throw ValidationException('柜号格式或校验码不正确');
     }
     if (bill.date.trim().isEmpty) throw ValidationException('日期不能为空');
     if (bill.plateNumber.trim().isEmpty) {
