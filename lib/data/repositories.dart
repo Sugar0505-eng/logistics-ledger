@@ -114,31 +114,98 @@ class FeePresetRepository {
   }
 }
 
-/// 导出时使用的公司账户预设。
-class ExportSettingsRepository {
-  ExportSettingsRepository(this._app);
+/// 可供账目选择的公司账户预设。
+class AccountPresetRepository {
+  AccountPresetRepository(this._app);
   final AppDatabase _app;
 
-  Future<ExportSettings> get() async {
+  Future<List<AccountPreset>> all() async {
+    final rows = await _app.db.query('account_presets', orderBy: 'id ASC');
+    return rows.map(AccountPreset.fromMap).toList();
+  }
+
+  Future<AccountPreset?> byId(int? id) async {
+    if (id == null) return null;
     final rows = await _app.db.query(
-      'export_settings',
-      where: 'id = 1',
+      'account_presets',
+      where: 'id = ?',
+      whereArgs: [id],
       limit: 1,
     );
-    if (rows.isEmpty) return const ExportSettings();
-    final row = rows.first;
-    return ExportSettings(
-      companyAccount: row['company_account'] as String? ?? '',
-      accountName: row['account_name'] as String? ?? '',
+    return rows.isEmpty ? null : AccountPreset.fromMap(rows.first);
+  }
+
+  Future<AccountPreset> add({
+    required String companyAccount,
+    required String accountName,
+  }) async {
+    final values = _validatedValues(companyAccount, accountName);
+    await _ensureUnique(values);
+    final id = await _app.db.insert('account_presets', values);
+    return AccountPreset(
+      id: id,
+      companyAccount: values['company_account']!,
+      accountName: values['account_name']!,
     );
   }
 
-  Future<void> save(ExportSettings settings) async {
-    await _app.db.insert('export_settings', {
-      'id': 1,
-      'company_account': settings.companyAccount.trim(),
-      'account_name': settings.accountName.trim(),
-    }, conflictAlgorithm: ConflictAlgorithm.replace);
+  Future<void> update(
+    int id, {
+    required String companyAccount,
+    required String accountName,
+  }) async {
+    final values = _validatedValues(companyAccount, accountName);
+    await _ensureUnique(values, exceptId: id);
+    await _app.db.update(
+      'account_presets',
+      values,
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  Future<void> delete(int id) async {
+    final used = await _app.db.query(
+      'ledgers',
+      columns: ['id'],
+      where: 'account_preset_id = ?',
+      whereArgs: [id],
+      limit: 1,
+    );
+    if (used.isNotEmpty) {
+      throw ValidationException('该账户预设已被账目使用，不能删除');
+    }
+    await _app.db.delete('account_presets', where: 'id = ?', whereArgs: [id]);
+  }
+
+  Map<String, String> _validatedValues(
+    String companyAccount,
+    String accountName,
+  ) {
+    final account = companyAccount.trim();
+    final name = accountName.trim();
+    if (account.isEmpty) throw ValidationException('公司账户不能为空');
+    if (name.isEmpty) throw ValidationException('账户名不能为空');
+    return {'company_account': account, 'account_name': name};
+  }
+
+  Future<void> _ensureUnique(
+    Map<String, String> values, {
+    int? exceptId,
+  }) async {
+    final rows = await _app.db.query(
+      'account_presets',
+      columns: ['id'],
+      where:
+          'company_account = ? AND account_name = ?${exceptId == null ? '' : ' AND id != ?'}',
+      whereArgs: [
+        values['company_account'],
+        values['account_name'],
+        if (exceptId != null) exceptId,
+      ],
+      limit: 1,
+    );
+    if (rows.isNotEmpty) throw DuplicateException('相同的账户预设已存在');
   }
 }
 
@@ -174,11 +241,17 @@ class LedgerRepository {
     return Sqflite.firstIntValue(result) ?? 0;
   }
 
-  Future<Ledger> createLedger({String? name, required String createdAt}) async {
+  Future<Ledger> createLedger({
+    String? name,
+    required String createdAt,
+    required int accountPresetId,
+  }) async {
+    await _requireAccountPreset(accountPresetId);
     final ledger = Ledger(
       name: name,
       createdAt: createdAt,
       status: LedgerStatus.editing,
+      accountPresetId: accountPresetId,
     );
     final id = await _app.db.insert('ledgers', ledger.toMap()..remove('id'));
     return Ledger(
@@ -186,11 +259,13 @@ class LedgerRepository {
       name: name,
       createdAt: createdAt,
       status: LedgerStatus.editing,
+      accountPresetId: accountPresetId,
     );
   }
 
   Future<void> updateLedger(Ledger ledger) async {
     if (ledger.id == null) throw ValidationException('账目记录缺少 id');
+    await _requireAccountPreset(ledger.accountPresetId);
     final values = ledger.toMap()..remove('id');
     await _app.db.update(
       'ledgers',
@@ -203,6 +278,18 @@ class LedgerRepository {
   Future<void> deleteLedger(int id) async {
     // 外键 ON DELETE CASCADE 会级联删除 bills 及其 extra_fees
     await _app.db.delete('ledgers', where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<void> _requireAccountPreset(int? id) async {
+    if (id == null) throw ValidationException('请选择账户预设');
+    final rows = await _app.db.query(
+      'account_presets',
+      columns: ['id'],
+      where: 'id = ?',
+      whereArgs: [id],
+      limit: 1,
+    );
+    if (rows.isEmpty) throw ValidationException('所选账户预设不存在');
   }
 
   /// 读取某账目记录下的全部账单（含各自额外费用）。

@@ -17,9 +17,17 @@ void main() {
     );
     await database.init();
     addTearDown(database.close);
-    await LedgerRepository(
+    final account = await AccountPresetRepository(
       database,
-    ).createLedger(name: '七月批次', createdAt: '2026-07-16');
+    ).add(companyAccount: '招商银行 6214 0000', accountName: '邓杨');
+    final secondAccount = await AccountPresetRepository(
+      database,
+    ).add(companyAccount: '建设银行 6227 0000', accountName: '李明');
+    await LedgerRepository(database).createLedger(
+      name: '七月批次',
+      createdAt: '2026-07-16',
+      accountPresetId: account.id!,
+    );
 
     await tester.pumpWidget(
       ProviderScope(
@@ -42,6 +50,10 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.enterText(find.byType(TextField), '七月已结批次');
+    await tester.tap(find.byType(DropdownButtonFormField<int>));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('李明 · 建设银行 6227 0000').last);
+    await tester.pumpAndSettle();
     await tester.tap(find.text('已完成'));
     await tester.tap(find.text('保存'));
     await _pumpUntilFound(tester, find.text('七月已结批次'));
@@ -49,6 +61,11 @@ void main() {
 
     expect(find.text('七月已结批次'), findsOneWidget);
     expect(find.text('已完成'), findsOneWidget);
+    expect(find.textContaining('李明'), findsOneWidget);
+    expect(
+      (await LedgerRepository(database).allLedgers()).single.accountPresetId,
+      secondAccount.id,
+    );
   });
 }
 

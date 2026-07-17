@@ -27,12 +27,29 @@ class FeePreset {
       FeePreset(id: m['id'] as int?, name: m['name'] as String);
 }
 
-/// 导出文件底部展示的公司账户信息。
-class ExportSettings {
+/// 可供账目选择的公司账户预设。
+class AccountPreset {
+  final int? id;
   final String companyAccount;
   final String accountName;
 
-  const ExportSettings({this.companyAccount = '', this.accountName = ''});
+  const AccountPreset({
+    this.id,
+    required this.companyAccount,
+    required this.accountName,
+  });
+
+  Map<String, Object?> toMap() => {
+    'id': id,
+    'company_account': companyAccount,
+    'account_name': accountName,
+  };
+
+  factory AccountPreset.fromMap(Map<String, Object?> map) => AccountPreset(
+    id: map['id'] as int?,
+    companyAccount: map['company_account'] as String,
+    accountName: map['account_name'] as String,
+  );
 }
 
 enum LedgerStatus {
@@ -51,26 +68,31 @@ class Ledger {
   final String? name;
   final String createdAt; // yyyy-MM-dd
   final LedgerStatus status;
+  final int? accountPresetId;
 
   const Ledger({
     this.id,
     this.name,
     required this.createdAt,
     this.status = LedgerStatus.editing,
+    this.accountPresetId,
   });
 
-  Ledger copyWith({String? name, LedgerStatus? status}) => Ledger(
-    id: id,
-    name: name ?? this.name,
-    createdAt: createdAt,
-    status: status ?? this.status,
-  );
+  Ledger copyWith({String? name, LedgerStatus? status, int? accountPresetId}) =>
+      Ledger(
+        id: id,
+        name: name ?? this.name,
+        createdAt: createdAt,
+        status: status ?? this.status,
+        accountPresetId: accountPresetId ?? this.accountPresetId,
+      );
 
   Map<String, Object?> toMap() => {
     'id': id,
     'name': name,
     'created_at': createdAt,
     'status': status.name,
+    'account_preset_id': accountPresetId,
   };
 
   factory Ledger.fromMap(Map<String, Object?> m) => Ledger(
@@ -78,6 +100,7 @@ class Ledger {
     name: m['name'] as String?,
     createdAt: m['created_at'] as String,
     status: LedgerStatus.fromName(m['status'] as String),
+    accountPresetId: m['account_preset_id'] as int?,
   );
 }
 

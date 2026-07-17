@@ -46,7 +46,7 @@ class ExcelExporter {
   static List<int> buildWorkbook({
     required Ledger ledger,
     required List<Bill> bills,
-    required ExportSettings settings,
+    required AccountPreset accountPreset,
   }) {
     final workbook = Excel.createExcel();
     final sheet = workbook['Sheet1'];
@@ -187,14 +187,14 @@ class ExcelExporter {
       sheet,
       totalRow + 1,
       lastColumn,
-      '公司账户：${settings.companyAccount}',
+      '公司账户：${accountPreset.companyAccount}',
       textStyle,
     );
     _writeMergedFooter(
       sheet,
       totalRow + 2,
       lastColumn,
-      '账户名：${settings.accountName}',
+      '账户名：${accountPreset.accountName}',
       textStyle,
     );
 

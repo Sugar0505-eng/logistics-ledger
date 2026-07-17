@@ -108,8 +108,16 @@ class LedgerDetailPage extends ConsumerWidget {
 
     final repo = ref.read(ledgerRepoProvider);
     final ledger = await repo.ledgerById(ledgerId);
-    final settings = await ref.read(exportSettingsRepoProvider).get();
+    final accountPreset = await ref
+        .read(accountPresetRepoProvider)
+        .byId(ledger.accountPresetId);
     if (!context.mounted) return;
+    if (accountPreset == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('请先编辑账目并选择账户预设')));
+      return;
+    }
 
     final inputName = await _promptExportFileName(
       context,
@@ -122,7 +130,7 @@ class LedgerDetailPage extends ConsumerWidget {
     final bytes = ExcelExporter.buildWorkbook(
       ledger: ledger,
       bills: bills,
-      settings: settings,
+      accountPreset: accountPreset,
     );
     final dir = await getTemporaryDirectory();
     final fileName = ExcelExporter.normalizeFileName(

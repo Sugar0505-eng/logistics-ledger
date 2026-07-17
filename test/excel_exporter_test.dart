@@ -45,7 +45,7 @@ void main() {
     final bytes = ExcelExporter.buildWorkbook(
       ledger: const Ledger(name: '挚盛7月份现金单', createdAt: '2026-07-17'),
       bills: bills,
-      settings: const ExportSettings(
+      accountPreset: const AccountPreset(
         companyAccount: '招商银行 6214 0000',
         accountName: '邓杨',
       ),
@@ -78,7 +78,10 @@ void main() {
       ExcelExporter.buildWorkbook(
         ledger: const Ledger(createdAt: '2026-07-16'),
         bills: const [duplicateFees],
-        settings: const ExportSettings(),
+        accountPreset: const AccountPreset(
+          companyAccount: '招商银行 6214 0000',
+          accountName: '邓杨',
+        ),
       ),
     )['Sheet1'];
 

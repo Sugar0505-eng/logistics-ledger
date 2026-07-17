@@ -17,8 +17,8 @@ final feePresetRepoProvider = Provider<FeePresetRepository>(
   (ref) => FeePresetRepository(ref.watch(databaseProvider)),
 );
 
-final exportSettingsRepoProvider = Provider<ExportSettingsRepository>(
-  (ref) => ExportSettingsRepository(ref.watch(databaseProvider)),
+final accountPresetRepoProvider = Provider<AccountPresetRepository>(
+  (ref) => AccountPresetRepository(ref.watch(databaseProvider)),
 );
 
 final ledgerRepoProvider = Provider<LedgerRepository>(
@@ -35,8 +35,12 @@ final feePresetsProvider = FutureProvider<List<FeePreset>>(
   (ref) => ref.watch(feePresetRepoProvider).all(),
 );
 
-final exportSettingsProvider = FutureProvider<ExportSettings>(
-  (ref) => ref.watch(exportSettingsRepoProvider).get(),
+final accountPresetsProvider = FutureProvider<List<AccountPreset>>(
+  (ref) => ref.watch(accountPresetRepoProvider).all(),
+);
+
+final accountPresetProvider = FutureProvider.family<AccountPreset?, int?>(
+  (ref, id) => ref.watch(accountPresetRepoProvider).byId(id),
 );
 
 /// 账目记录列表。

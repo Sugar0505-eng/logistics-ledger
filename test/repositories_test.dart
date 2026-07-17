@@ -8,7 +8,8 @@ void main() {
   late AppDatabase database;
   late PlateRepository plates;
   late FeePresetRepository presets;
-  late ExportSettingsRepository exportSettings;
+  late AccountPresetRepository accountPresets;
+  late AccountPreset defaultAccount;
   late LedgerRepository ledgers;
 
   setUpAll(sqfliteFfiInit);
@@ -21,7 +22,11 @@ void main() {
     await database.init();
     plates = PlateRepository(database);
     presets = FeePresetRepository(database);
-    exportSettings = ExportSettingsRepository(database);
+    accountPresets = AccountPresetRepository(database);
+    defaultAccount = await accountPresets.add(
+      companyAccount: '招商银行 6214 0000',
+      accountName: '邓杨',
+    );
     ledgers = LedgerRepository(database);
   });
 
@@ -39,6 +44,7 @@ void main() {
     final ledger = await ledgers.createLedger(
       name: '七月批次',
       createdAt: '2026-07-16',
+      accountPresetId: defaultAccount.id!,
     );
 
     await ledgers.updateLedger(
@@ -47,26 +53,51 @@ void main() {
         name: '七月已结批次',
         createdAt: ledger.createdAt,
         status: LedgerStatus.completed,
+        accountPresetId: defaultAccount.id,
       ),
     );
 
     final updated = (await ledgers.allLedgers()).single;
     expect(updated.name, '七月已结批次');
     expect(updated.status, LedgerStatus.completed);
+    expect(updated.accountPresetId, defaultAccount.id);
   });
 
-  test('公司账户及账户名预设可以保存', () async {
-    await exportSettings.save(
-      const ExportSettings(companyAccount: '招商银行 6214 0000', accountName: '邓杨'),
+  test('账户预设支持多条、编辑和删除保护', () async {
+    final second = await accountPresets.add(
+      companyAccount: '建设银行 6227 0000',
+      accountName: '李明',
+    );
+    expect(await accountPresets.all(), hasLength(2));
+
+    await accountPresets.update(
+      second.id!,
+      companyAccount: '建设银行 6227 1111',
+      accountName: '李明',
+    );
+    expect(
+      (await accountPresets.byId(second.id))!.companyAccount,
+      '建设银行 6227 1111',
     );
 
-    final settings = await exportSettings.get();
-    expect(settings.companyAccount, '招商银行 6214 0000');
-    expect(settings.accountName, '邓杨');
+    final ledger = await ledgers.createLedger(
+      createdAt: '2026-07-16',
+      accountPresetId: defaultAccount.id!,
+    );
+    expect(ledger.accountPresetId, defaultAccount.id);
+    expect(
+      () => accountPresets.delete(defaultAccount.id!),
+      throwsA(isA<ValidationException>()),
+    );
+    await accountPresets.delete(second.id!);
+    expect(await accountPresets.all(), hasLength(1));
   });
 
   test('账单和费用在事务中保存并可完整读取', () async {
-    final ledger = await ledgers.createLedger(createdAt: '2026-07-16');
+    final ledger = await ledgers.createLedger(
+      createdAt: '2026-07-16',
+      accountPresetId: defaultAccount.id!,
+    );
     final billId = await ledgers.saveBill(
       Bill(
         ledgerId: ledger.id,
@@ -91,7 +122,10 @@ void main() {
   });
 
   test('柜号不校验，重复费用名仍在写入前被拒绝', () async {
-    final ledger = await ledgers.createLedger(createdAt: '2026-07-16');
+    final ledger = await ledgers.createLedger(
+      createdAt: '2026-07-16',
+      accountPresetId: defaultAccount.id!,
+    );
 
     Future<int> save(String containerNo, List<ExtraFee> fees) {
       return ledgers.saveBill(
@@ -119,7 +153,10 @@ void main() {
   });
 
   test('删除账目会级联删除账单与额外费用', () async {
-    final ledger = await ledgers.createLedger(createdAt: '2026-07-16');
+    final ledger = await ledgers.createLedger(
+      createdAt: '2026-07-16',
+      accountPresetId: defaultAccount.id!,
+    );
     await ledgers.saveBill(
       Bill(
         ledgerId: ledger.id,

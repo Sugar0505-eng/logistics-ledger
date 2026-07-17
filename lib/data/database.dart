@@ -29,7 +29,7 @@ class AppDatabase {
     _db = await factory.openDatabase(
       path,
       options: sqflite.OpenDatabaseOptions(
-        version: 2,
+        version: 3,
         onConfigure: (db) async {
           await db.execute('PRAGMA foreign_keys = ON');
         },
@@ -55,11 +55,22 @@ class AppDatabase {
     ''');
 
     await db.execute('''
+      CREATE TABLE account_presets (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        company_account TEXT NOT NULL,
+        account_name TEXT NOT NULL,
+        UNIQUE (company_account, account_name)
+      )
+    ''');
+
+    await db.execute('''
       CREATE TABLE ledgers (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT,
         created_at TEXT NOT NULL,
-        status TEXT NOT NULL
+        status TEXT NOT NULL,
+        account_preset_id INTEGER NOT NULL,
+        FOREIGN KEY (account_preset_id) REFERENCES account_presets (id)
       )
     ''');
 
@@ -88,19 +99,9 @@ class AppDatabase {
 
     await db.execute('CREATE INDEX idx_bills_ledger ON bills (ledger_id)');
     await db.execute('CREATE INDEX idx_fees_bill ON extra_fees (bill_id)');
-
-    await db.execute('''
-      CREATE TABLE export_settings (
-        id INTEGER PRIMARY KEY CHECK (id = 1),
-        company_account TEXT NOT NULL DEFAULT '',
-        account_name TEXT NOT NULL DEFAULT ''
-      )
-    ''');
-    await db.insert('export_settings', {
-      'id': 1,
-      'company_account': '',
-      'account_name': '',
-    });
+    await db.execute(
+      'CREATE INDEX idx_ledgers_account ON ledgers (account_preset_id)',
+    );
   }
 
   Future<void> _onUpgrade(
@@ -124,6 +125,44 @@ class AppDatabase {
         'company_account': '',
         'account_name': '',
       });
+    }
+    if (oldVersion < 3) {
+      await db.execute('''
+        CREATE TABLE account_presets (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          company_account TEXT NOT NULL,
+          account_name TEXT NOT NULL,
+          UNIQUE (company_account, account_name)
+        )
+      ''');
+      final settings = await db.query(
+        'export_settings',
+        where: 'id = 1',
+        limit: 1,
+      );
+      int? migratedPresetId;
+      if (settings.isNotEmpty) {
+        final companyAccount =
+            (settings.first['company_account'] as String? ?? '').trim();
+        final accountName = (settings.first['account_name'] as String? ?? '')
+            .trim();
+        if (companyAccount.isNotEmpty || accountName.isNotEmpty) {
+          migratedPresetId = await db.insert('account_presets', {
+            'company_account': companyAccount,
+            'account_name': accountName,
+          });
+        }
+      }
+      await db.execute(
+        'ALTER TABLE ledgers ADD COLUMN account_preset_id INTEGER',
+      );
+      if (migratedPresetId != null) {
+        await db.update('ledgers', {'account_preset_id': migratedPresetId});
+      }
+      await db.execute(
+        'CREATE INDEX idx_ledgers_account ON ledgers (account_preset_id)',
+      );
+      await db.execute('DROP TABLE export_settings');
     }
   }
 

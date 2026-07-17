@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'fees/fee_preset_list_page.dart';
 import 'ledgers/ledger_list_page.dart';
 import 'plates/plate_list_page.dart';
-import 'settings/export_settings_page.dart';
+import 'settings/account_preset_list_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -19,7 +19,7 @@ class _HomePageState extends State<HomePage> {
     LedgerListPage(),
     PlateListPage(),
     FeePresetListPage(),
-    ExportSettingsPage(),
+    AccountPresetListPage(),
   ];
 
   @override

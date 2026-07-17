@@ -37,36 +37,34 @@ class LedgerListPage extends ConsumerWidget {
   }
 
   Future<void> _create(BuildContext context, WidgetRef ref) async {
-    final controller = TextEditingController();
-    final name = await showDialog<String>(
+    final presets = await ref.read(accountPresetRepoProvider).all();
+    if (!context.mounted) return;
+    if (presets.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('请先在「账户预设」中添加至少一个账户')));
+      return;
+    }
+    final result = await showDialog<_LedgerEditResult>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('新建账目记录'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: const InputDecoration(
-            labelText: '名称/备注（可选）',
-            hintText: '如：6月港口批次',
-          ),
+      builder: (ctx) => _LedgerEditDialog(
+        ledger: Ledger(
+          createdAt: todayYmd(),
+          accountPresetId: presets.first.id,
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, controller.text.trim()),
-            child: const Text('创建'),
-          ),
-        ],
+        accountPresets: presets,
+        isCreate: true,
       ),
     );
-    if (name == null) return; // 取消
+    if (result == null) return;
 
     final ledger = await ref
         .read(ledgerRepoProvider)
-        .createLedger(name: name.isEmpty ? null : name, createdAt: todayYmd());
+        .createLedger(
+          name: result.name.isEmpty ? null : result.name,
+          createdAt: todayYmd(),
+          accountPresetId: result.accountPresetId,
+        );
     ref.invalidate(ledgersProvider);
     if (!context.mounted) return;
     Navigator.push(
@@ -84,13 +82,20 @@ class _LedgerTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final countAsync = ref.watch(billCountProvider(ledger.id!));
     final count = countAsync.maybeWhen(data: (c) => c, orElse: () => 0);
+    final accountAsync = ref.watch(
+      accountPresetProvider(ledger.accountPresetId),
+    );
+    final accountName = accountAsync.maybeWhen(
+      data: (preset) => preset?.accountName ?? '未选择账户',
+      orElse: () => '账户加载中',
+    );
     final completed = ledger.status == LedgerStatus.completed;
     return ListTile(
       leading: const Icon(Icons.receipt_long),
       title: Text(
         ledger.name?.isNotEmpty == true ? ledger.name! : '账目 #${ledger.id}',
       ),
-      subtitle: Text('${ledger.createdAt} · $count 条账单'),
+      subtitle: Text('${ledger.createdAt} · $count 条账单 · $accountName'),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -144,9 +149,18 @@ class _LedgerTile extends ConsumerWidget {
 
   Future<void> _edit(BuildContext context, WidgetRef ref) async {
     try {
+      final presets = await ref.read(accountPresetRepoProvider).all();
+      if (!context.mounted) return;
+      if (presets.isEmpty) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('请先在「账户预设」中添加至少一个账户')));
+        return;
+      }
       final result = await showDialog<_LedgerEditResult>(
         context: context,
-        builder: (ctx) => _LedgerEditDialog(ledger: ledger),
+        builder: (ctx) =>
+            _LedgerEditDialog(ledger: ledger, accountPresets: presets),
       );
       if (result == null) return;
 
@@ -158,6 +172,7 @@ class _LedgerTile extends ConsumerWidget {
               name: result.name.isEmpty ? null : result.name,
               createdAt: ledger.createdAt,
               status: result.status,
+              accountPresetId: result.accountPresetId,
             ),
           );
       ref.invalidate(ledgersProvider);
@@ -197,9 +212,15 @@ class _LedgerTile extends ConsumerWidget {
 enum _LedgerAction { edit, delete }
 
 class _LedgerEditDialog extends StatefulWidget {
-  const _LedgerEditDialog({required this.ledger});
+  const _LedgerEditDialog({
+    required this.ledger,
+    required this.accountPresets,
+    this.isCreate = false,
+  });
 
   final Ledger ledger;
+  final List<AccountPreset> accountPresets;
+  final bool isCreate;
 
   @override
   State<_LedgerEditDialog> createState() => _LedgerEditDialogState();
@@ -208,12 +229,18 @@ class _LedgerEditDialog extends StatefulWidget {
 class _LedgerEditDialogState extends State<_LedgerEditDialog> {
   late final TextEditingController _controller;
   late LedgerStatus _status;
+  late int _accountPresetId;
 
   @override
   void initState() {
     super.initState();
     _controller = TextEditingController(text: widget.ledger.name ?? '');
     _status = widget.ledger.status;
+    final currentId = widget.ledger.accountPresetId;
+    _accountPresetId =
+        widget.accountPresets.any((preset) => preset.id == currentId)
+        ? currentId!
+        : widget.accountPresets.first.id!;
   }
 
   @override
@@ -226,7 +253,7 @@ class _LedgerEditDialogState extends State<_LedgerEditDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       scrollable: true,
-      title: const Text('编辑账目记录'),
+      title: Text(widget.isCreate ? '新建账目记录' : '编辑账目记录'),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -235,6 +262,24 @@ class _LedgerEditDialogState extends State<_LedgerEditDialog> {
             controller: _controller,
             autofocus: true,
             decoration: const InputDecoration(labelText: '名称/备注（可选）'),
+          ),
+          const SizedBox(height: 20),
+          DropdownButtonFormField<int>(
+            initialValue: _accountPresetId,
+            decoration: const InputDecoration(labelText: '账户预设'),
+            items: [
+              for (final preset in widget.accountPresets)
+                DropdownMenuItem(
+                  value: preset.id!,
+                  child: Text(
+                    '${preset.accountName} · ${preset.companyAccount}',
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+            ],
+            onChanged: (value) {
+              if (value != null) setState(() => _accountPresetId = value);
+            },
           ),
           const SizedBox(height: 20),
           const Text('状态'),
@@ -267,7 +312,11 @@ class _LedgerEditDialogState extends State<_LedgerEditDialog> {
         FilledButton(
           onPressed: () => Navigator.pop(
             context,
-            _LedgerEditResult(name: _controller.text.trim(), status: _status),
+            _LedgerEditResult(
+              name: _controller.text.trim(),
+              status: _status,
+              accountPresetId: _accountPresetId,
+            ),
           ),
           child: const Text('保存'),
         ),
@@ -277,8 +326,13 @@ class _LedgerEditDialogState extends State<_LedgerEditDialog> {
 }
 
 class _LedgerEditResult {
-  const _LedgerEditResult({required this.name, required this.status});
+  const _LedgerEditResult({
+    required this.name,
+    required this.status,
+    required this.accountPresetId,
+  });
 
   final String name;
   final LedgerStatus status;
+  final int accountPresetId;
 }
