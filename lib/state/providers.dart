@@ -17,6 +17,10 @@ final feePresetRepoProvider = Provider<FeePresetRepository>(
   (ref) => FeePresetRepository(ref.watch(databaseProvider)),
 );
 
+final exportSettingsRepoProvider = Provider<ExportSettingsRepository>(
+  (ref) => ExportSettingsRepository(ref.watch(databaseProvider)),
+);
+
 final ledgerRepoProvider = Provider<LedgerRepository>(
   (ref) => LedgerRepository(ref.watch(databaseProvider)),
 );
@@ -29,6 +33,10 @@ final platesProvider = FutureProvider<List<Plate>>(
 /// 费用预设列表。
 final feePresetsProvider = FutureProvider<List<FeePreset>>(
   (ref) => ref.watch(feePresetRepoProvider).all(),
+);
+
+final exportSettingsProvider = FutureProvider<ExportSettings>(
+  (ref) => ref.watch(exportSettingsRepoProvider).get(),
 );
 
 /// 账目记录列表。

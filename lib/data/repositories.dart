@@ -114,6 +114,34 @@ class FeePresetRepository {
   }
 }
 
+/// 导出时使用的公司账户预设。
+class ExportSettingsRepository {
+  ExportSettingsRepository(this._app);
+  final AppDatabase _app;
+
+  Future<ExportSettings> get() async {
+    final rows = await _app.db.query(
+      'export_settings',
+      where: 'id = 1',
+      limit: 1,
+    );
+    if (rows.isEmpty) return const ExportSettings();
+    final row = rows.first;
+    return ExportSettings(
+      companyAccount: row['company_account'] as String? ?? '',
+      accountName: row['account_name'] as String? ?? '',
+    );
+  }
+
+  Future<void> save(ExportSettings settings) async {
+    await _app.db.insert('export_settings', {
+      'id': 1,
+      'company_account': settings.companyAccount.trim(),
+      'account_name': settings.accountName.trim(),
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+}
+
 /// 账目记录 / 账单 / 额外费用仓储。
 class LedgerRepository {
   LedgerRepository(this._app);
@@ -125,6 +153,17 @@ class LedgerRepository {
       orderBy: 'created_at DESC, id DESC',
     );
     return rows.map(Ledger.fromMap).toList();
+  }
+
+  Future<Ledger> ledgerById(int id) async {
+    final rows = await _app.db.query(
+      'ledgers',
+      where: 'id = ?',
+      whereArgs: [id],
+      limit: 1,
+    );
+    if (rows.isEmpty) throw StateError('账目记录不存在：$id');
+    return Ledger.fromMap(rows.first);
   }
 
   Future<int> billCount(int ledgerId) async {
@@ -230,6 +269,9 @@ class LedgerRepository {
       throw ValidationException('账单必须关联账目记录');
     }
     if (bill.date.trim().isEmpty) throw ValidationException('日期不能为空');
+    if (bill.location.trim().isEmpty) {
+      throw ValidationException('地点不能为空');
+    }
     if (bill.plateNumber.trim().isEmpty) {
       throw ValidationException('车牌号不能为空');
     }

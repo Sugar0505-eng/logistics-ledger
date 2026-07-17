@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'data/database.dart';
@@ -27,6 +28,9 @@ class LogisticsLedgerApp extends StatelessWidget {
     return MaterialApp(
       title: '物流账目',
       theme: ThemeData(colorSchemeSeed: Colors.indigo, useMaterial3: true),
+      locale: const Locale('zh', 'CN'),
+      supportedLocales: const [Locale('zh', 'CN')],
+      localizationsDelegates: GlobalMaterialLocalizations.delegates,
       home: const HomePage(),
     );
   }

@@ -10,7 +10,7 @@ Flutter 移动端物流账单记录工具。Android 为首要交付平台，数�
 - Google ML Kit 端上 OCR + ISO 6346 柜号格式和校验码验证
 - 额外费用预设，录入时可选择或手动输入
 - 金额以整数分存储，显示和导出时格式化为两位小数
-- 单个账目记录导出 CSV，额外费用动态成列，UTF-8 含 BOM
+- 单个账目记录导出 Excel，支持自定义文件名、动态费用列、合计与账户预设
 
 ## 环境要求
 
@@ -51,7 +51,7 @@ lib/
   services/
     money.dart              分/元转换与格式化
     container_number.dart   ISO 6346 提取与校验
-    csv_exporter.dart       CSV 动态列生成
+    excel_exporter.dart     Excel 导出与样式生成
     ocr_service.dart        ML Kit 拍照/选图识别
   state/providers.dart      Riverpod providers
   ui/                       账目、车牌、费用与 OCR 页面
@@ -68,4 +68,4 @@ TestFlight 工作流需要在 Codemagic 中配置 App Store Connect 集成 `APP_
 
 ## 数据边界
 
-SQLite 数据仅保存在当前设备。CSV 可用于报表导出，但不是完整数据库备份，也不能恢复应用数据。正式承载业务数据前，应完成真机 OCR、Excel CSV、升级迁移和备份恢复验收。
+SQLite 数据仅保存在当前设备。Excel 可用于报表导出，但不是完整数据库备份，也不能恢复应用数据。正式承载业务数据前，应完成真机 OCR、Excel 导出、升级迁移和备份恢复验收。

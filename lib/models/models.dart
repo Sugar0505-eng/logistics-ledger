@@ -27,6 +27,14 @@ class FeePreset {
       FeePreset(id: m['id'] as int?, name: m['name'] as String);
 }
 
+/// 导出文件底部展示的公司账户信息。
+class ExportSettings {
+  final String companyAccount;
+  final String accountName;
+
+  const ExportSettings({this.companyAccount = '', this.accountName = ''});
+}
+
 enum LedgerStatus {
   editing,
   completed;
@@ -115,6 +123,7 @@ class Bill {
   final int? ledgerId;
   final String containerNo;
   final String date; // yyyy-MM-dd
+  final String location;
   final int freightCents;
   final String plateNumber;
   final List<ExtraFee> extraFees;
@@ -124,6 +133,7 @@ class Bill {
     this.ledgerId,
     required this.containerNo,
     required this.date,
+    required this.location,
     required this.freightCents,
     required this.plateNumber,
     this.extraFees = const [],
@@ -139,6 +149,7 @@ class Bill {
     int? ledgerId,
     String? containerNo,
     String? date,
+    String? location,
     int? freightCents,
     String? plateNumber,
     List<ExtraFee>? extraFees,
@@ -147,6 +158,7 @@ class Bill {
     ledgerId: ledgerId ?? this.ledgerId,
     containerNo: containerNo ?? this.containerNo,
     date: date ?? this.date,
+    location: location ?? this.location,
     freightCents: freightCents ?? this.freightCents,
     plateNumber: plateNumber ?? this.plateNumber,
     extraFees: extraFees ?? this.extraFees,
@@ -157,6 +169,7 @@ class Bill {
     'ledger_id': ledgerId,
     'container_no': containerNo,
     'date': date,
+    'location': location,
     'freight_cents': freightCents,
     'plate_number': plateNumber,
   };
@@ -169,6 +182,7 @@ class Bill {
     ledgerId: m['ledger_id'] as int?,
     containerNo: m['container_no'] as String,
     date: m['date'] as String,
+    location: m['location'] as String? ?? '',
     freightCents: m['freight_cents'] as int,
     plateNumber: m['plate_number'] as String,
     extraFees: extraFees,

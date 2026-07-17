@@ -7,9 +7,10 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../models/models.dart';
-import '../../services/csv_exporter.dart';
+import '../../services/excel_exporter.dart';
 import '../../services/money.dart';
 import '../../state/providers.dart';
+import '../date_utils.dart';
 import 'bill_edit_page.dart';
 
 class LedgerDetailPage extends ConsumerWidget {
@@ -25,7 +26,7 @@ class LedgerDetailPage extends ConsumerWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.ios_share),
-            tooltip: '导出 CSV',
+            tooltip: '导出 Excel',
             onPressed: () => _export(context, ref),
           ),
         ],
@@ -105,16 +106,68 @@ class LedgerDetailPage extends ConsumerWidget {
       return;
     }
 
-    final csv = CsvExporter.toCsv(bills);
+    final repo = ref.read(ledgerRepoProvider);
+    final ledger = await repo.ledgerById(ledgerId);
+    final settings = await ref.read(exportSettingsRepoProvider).get();
+    if (!context.mounted) return;
+
+    final inputName = await _promptExportFileName(
+      context,
+      ledger.name?.trim().isNotEmpty == true
+          ? ledger.name!.trim()
+          : '账目_$ledgerId',
+    );
+    if (inputName == null || inputName.trim().isEmpty) return;
+
+    final bytes = ExcelExporter.buildWorkbook(
+      ledger: ledger,
+      bills: bills,
+      settings: settings,
+    );
     final dir = await getTemporaryDirectory();
-    final fileName =
-        'ledger_${ledgerId}_${DateTime.now().millisecondsSinceEpoch}.csv';
+    final fileName = ExcelExporter.normalizeFileName(
+      inputName,
+      fallback: '账目_$ledgerId',
+    );
     final file = File(p.join(dir.path, fileName));
-    await file.writeAsString(csv);
+    await file.writeAsBytes(bytes, flush: true);
 
     await SharePlus.instance.share(
       ShareParams(files: [XFile(file.path)], subject: '账目导出 $fileName'),
     );
+  }
+
+  Future<String?> _promptExportFileName(
+    BuildContext context,
+    String defaultName,
+  ) async {
+    final controller = TextEditingController(text: defaultName);
+    try {
+      return await showDialog<String>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('导出文件名'),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            decoration: const InputDecoration(suffixText: '.xlsx'),
+            onSubmitted: (value) => Navigator.pop(ctx, value.trim()),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('取消'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, controller.text.trim()),
+              child: const Text('导出'),
+            ),
+          ],
+        ),
+      );
+    } finally {
+      controller.dispose();
+    }
   }
 }
 
@@ -133,7 +186,7 @@ class _BillTile extends ConsumerWidget {
       title: Text(bill.containerNo),
       subtitle: Text(
         [
-          '${bill.date} · ${bill.plateNumber}',
+          '${formatChineseDate(bill.date)} · ${bill.location} · ${bill.plateNumber}',
           '运费 ${Money.formatCents(bill.freightCents)}',
           if (feeSummary.isNotEmpty) '额外：$feeSummary',
         ].join('\n'),

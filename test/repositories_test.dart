@@ -8,6 +8,7 @@ void main() {
   late AppDatabase database;
   late PlateRepository plates;
   late FeePresetRepository presets;
+  late ExportSettingsRepository exportSettings;
   late LedgerRepository ledgers;
 
   setUpAll(sqfliteFfiInit);
@@ -20,6 +21,7 @@ void main() {
     await database.init();
     plates = PlateRepository(database);
     presets = FeePresetRepository(database);
+    exportSettings = ExportSettingsRepository(database);
     ledgers = LedgerRepository(database);
   });
 
@@ -53,6 +55,16 @@ void main() {
     expect(updated.status, LedgerStatus.completed);
   });
 
+  test('公司账户及账户名预设可以保存', () async {
+    await exportSettings.save(
+      const ExportSettings(companyAccount: '招商银行 6214 0000', accountName: '邓杨'),
+    );
+
+    final settings = await exportSettings.get();
+    expect(settings.companyAccount, '招商银行 6214 0000');
+    expect(settings.accountName, '邓杨');
+  });
+
   test('账单和费用在事务中保存并可完整读取', () async {
     final ledger = await ledgers.createLedger(createdAt: '2026-07-16');
     final billId = await ledgers.saveBill(
@@ -60,6 +72,7 @@ void main() {
         ledgerId: ledger.id,
         containerNo: 'CSQU3054383',
         date: '2026-07-16',
+        location: '广州',
         freightCents: 150000,
         plateNumber: '京A12345',
         extraFees: const [
@@ -72,6 +85,7 @@ void main() {
     final bill = (await ledgers.billsOf(ledger.id!)).single;
     expect(bill.id, billId);
     expect(bill.extraFees, hasLength(2));
+    expect(bill.location, '广州');
     expect(bill.subtotalCents, 175000);
     expect(await ledgers.billCount(ledger.id!), 1);
   });
@@ -85,6 +99,7 @@ void main() {
           ledgerId: ledger.id,
           containerNo: containerNo,
           date: '2026-07-16',
+          location: '乐从',
           freightCents: 10000,
           plateNumber: '京A12345',
           extraFees: fees,
@@ -110,6 +125,7 @@ void main() {
         ledgerId: ledger.id,
         containerNo: 'CSQU3054383',
         date: '2026-07-16',
+        location: '东涌',
         freightCents: 10000,
         plateNumber: '京A12345',
         extraFees: const [ExtraFee(name: '吊柜费', amountCents: 1000)],

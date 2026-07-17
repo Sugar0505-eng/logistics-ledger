@@ -29,11 +29,12 @@ class AppDatabase {
     _db = await factory.openDatabase(
       path,
       options: sqflite.OpenDatabaseOptions(
-        version: 1,
+        version: 2,
         onConfigure: (db) async {
           await db.execute('PRAGMA foreign_keys = ON');
         },
         onCreate: _onCreate,
+        onUpgrade: _onUpgrade,
       ),
     );
   }
@@ -68,6 +69,7 @@ class AppDatabase {
         ledger_id INTEGER NOT NULL,
         container_no TEXT NOT NULL,
         date TEXT NOT NULL,
+        location TEXT NOT NULL DEFAULT '',
         freight_cents INTEGER NOT NULL,
         plate_number TEXT NOT NULL,
         FOREIGN KEY (ledger_id) REFERENCES ledgers (id) ON DELETE CASCADE
@@ -86,6 +88,43 @@ class AppDatabase {
 
     await db.execute('CREATE INDEX idx_bills_ledger ON bills (ledger_id)');
     await db.execute('CREATE INDEX idx_fees_bill ON extra_fees (bill_id)');
+
+    await db.execute('''
+      CREATE TABLE export_settings (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        company_account TEXT NOT NULL DEFAULT '',
+        account_name TEXT NOT NULL DEFAULT ''
+      )
+    ''');
+    await db.insert('export_settings', {
+      'id': 1,
+      'company_account': '',
+      'account_name': '',
+    });
+  }
+
+  Future<void> _onUpgrade(
+    sqflite.Database db,
+    int oldVersion,
+    int newVersion,
+  ) async {
+    if (oldVersion < 2) {
+      await db.execute(
+        "ALTER TABLE bills ADD COLUMN location TEXT NOT NULL DEFAULT ''",
+      );
+      await db.execute('''
+        CREATE TABLE export_settings (
+          id INTEGER PRIMARY KEY CHECK (id = 1),
+          company_account TEXT NOT NULL DEFAULT '',
+          account_name TEXT NOT NULL DEFAULT ''
+        )
+      ''');
+      await db.insert('export_settings', {
+        'id': 1,
+        'company_account': '',
+        'account_name': '',
+      });
+    }
   }
 
   Future<void> close() async {

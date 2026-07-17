@@ -26,6 +26,7 @@ class _BillEditPageState extends ConsumerState<BillEditPage> {
   final OcrService _ocr = OcrService();
 
   late final TextEditingController _containerCtrl;
+  late final TextEditingController _locationCtrl;
   late final TextEditingController _freightCtrl;
   late String _date;
   String _plate = '';
@@ -39,6 +40,7 @@ class _BillEditPageState extends ConsumerState<BillEditPage> {
     super.initState();
     final b = widget.bill;
     _containerCtrl = TextEditingController(text: b?.containerNo ?? '');
+    _locationCtrl = TextEditingController(text: b?.location ?? '');
     _freightCtrl = TextEditingController(
       text: b == null ? '' : Money.formatCents(b.freightCents),
     );
@@ -59,6 +61,7 @@ class _BillEditPageState extends ConsumerState<BillEditPage> {
   @override
   void dispose() {
     _containerCtrl.dispose();
+    _locationCtrl.dispose();
     _freightCtrl.dispose();
     for (final f in _fees) {
       f.amountCtrl.dispose();
@@ -76,6 +79,19 @@ class _BillEditPageState extends ConsumerState<BillEditPage> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            // 日期
+            InkWell(
+              onTap: _pickDate,
+              child: InputDecorator(
+                decoration: const InputDecoration(
+                  labelText: '日期',
+                  suffixIcon: Icon(Icons.calendar_today),
+                ),
+                child: Text(formatChineseDate(_date)),
+              ),
+            ),
+            const SizedBox(height: 16),
+
             // 柜号 + OCR
             TextFormField(
               controller: _containerCtrl,
@@ -101,16 +117,12 @@ class _BillEditPageState extends ConsumerState<BillEditPage> {
             ),
             const SizedBox(height: 16),
 
-            // 日期
-            InkWell(
-              onTap: _pickDate,
-              child: InputDecorator(
-                decoration: const InputDecoration(
-                  labelText: '日期',
-                  suffixIcon: Icon(Icons.calendar_today),
-                ),
-                child: Text(_date),
-              ),
+            // 地点
+            TextFormField(
+              controller: _locationCtrl,
+              decoration: const InputDecoration(labelText: '地点'),
+              validator: (value) =>
+                  value == null || value.trim().isEmpty ? '请输入地点' : null,
             ),
             const SizedBox(height: 16),
 
@@ -226,6 +238,7 @@ class _BillEditPageState extends ConsumerState<BillEditPage> {
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
       context: context,
+      locale: const Locale('zh', 'CN'),
       initialDate: parseYmd(_date),
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
@@ -335,6 +348,7 @@ class _BillEditPageState extends ConsumerState<BillEditPage> {
       ledgerId: widget.ledgerId,
       containerNo: _containerCtrl.text.trim().toUpperCase(),
       date: _date,
+      location: _locationCtrl.text.trim(),
       freightCents: Money.parseToCents(_freightCtrl.text)!,
       plateNumber: _plate,
       extraFees: _fees

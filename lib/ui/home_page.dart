@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'fees/fee_preset_list_page.dart';
 import 'ledgers/ledger_list_page.dart';
 import 'plates/plate_list_page.dart';
+import 'settings/export_settings_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -18,6 +19,7 @@ class _HomePageState extends State<HomePage> {
     LedgerListPage(),
     PlateListPage(),
     FeePresetListPage(),
+    ExportSettingsPage(),
   ];
 
   @override
@@ -31,6 +33,10 @@ class _HomePageState extends State<HomePage> {
           NavigationDestination(icon: Icon(Icons.receipt_long), label: '账目'),
           NavigationDestination(icon: Icon(Icons.directions_car), label: '车牌'),
           NavigationDestination(icon: Icon(Icons.sell), label: '费用预设'),
+          NavigationDestination(
+            icon: Icon(Icons.account_balance),
+            label: '账户预设',
+          ),
         ],
       ),
     );
