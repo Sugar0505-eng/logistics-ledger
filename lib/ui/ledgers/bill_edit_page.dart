@@ -139,18 +139,14 @@ class _BillEditPageState extends ConsumerState<BillEditPage> {
             TextFormField(
               controller: _sealCtrl,
               textCapitalization: TextCapitalization.characters,
-              decoration: const InputDecoration(
-                labelText: '封条号（可选）',
-              ),
+              decoration: const InputDecoration(labelText: '封条号（可选）'),
             ),
             const SizedBox(height: 16),
 
             TextFormField(
               controller: _bookingCtrl,
               textCapitalization: TextCapitalization.characters,
-              decoration: const InputDecoration(
-                labelText: '订舱号（可选）',
-              ),
+              decoration: const InputDecoration(labelText: '订舱号（可选）'),
             ),
             const SizedBox(height: 16),
 
@@ -348,9 +344,9 @@ class _BillEditPageState extends ConsumerState<BillEditPage> {
     );
     if (!mounted) return;
     if (parsed.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('未识别到可填入账单的信息，请检查文本格式')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('未识别到可填入账单的信息，请检查文本格式')));
       return;
     }
 

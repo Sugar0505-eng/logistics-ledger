@@ -54,21 +54,25 @@ class PastedBillParser {
   }) {
     final normalized = text.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
     final candidates = ContainerNumber.extractCandidates(normalized);
-    final labeledContainer = _extractCode(
-      normalized,
-      const ['柜号', '箱号', '集装箱号', 'container no', 'container'],
-    );
+    final labeledContainer = _extractCode(normalized, const [
+      '柜号',
+      '箱号',
+      '集装箱号',
+      'container no',
+      'container',
+    ]);
     final container = candidates.isNotEmpty
         ? candidates.first
         : labeledContainer?.toUpperCase();
 
     final feeAmounts = <String, int>{};
-    final names = feePresetNames
-        .map((name) => name.trim())
-        .where((name) => name.isNotEmpty)
-        .toSet()
-        .toList()
-      ..sort((a, b) => b.length.compareTo(a.length));
+    final names =
+        feePresetNames
+            .map((name) => name.trim())
+            .where((name) => name.isNotEmpty)
+            .toSet()
+            .toList()
+          ..sort((a, b) => b.length.compareTo(a.length));
     for (final name in names) {
       final amount = _extractAmountAfterLabels(normalized, [name]);
       if (amount != null) feeAmounts[name] = amount;
@@ -76,24 +80,34 @@ class PastedBillParser {
 
     return PastedBillData(
       containerNumber: _nonEmpty(container),
-      sealNumber: _extractCode(
-        normalized,
-        const ['封条号', '封号', '铅封号', 'seal no', 'seal'],
-      ),
-      bookingNumber: _extractCode(
-        normalized,
-        const ['订舱号', '订仓号', '订舱单号', 'booking no', 'booking'],
-      ),
+      sealNumber: _extractCode(normalized, const [
+        '封条号',
+        '封号',
+        '铅封号',
+        'seal no',
+        'seal',
+      ]),
+      bookingNumber: _extractCode(normalized, const [
+        '订舱号',
+        '订仓号',
+        '订舱单号',
+        'booking no',
+        'booking',
+      ]),
       date: _extractDate(normalized),
-      location: _extractText(
-        normalized,
-        const ['地点', '装货地点', '卸货地点', '地址', 'location'],
-      ),
+      location: _extractText(normalized, const [
+        '地点',
+        '装货地点',
+        '卸货地点',
+        '地址',
+        'location',
+      ]),
       plateNumber: _extractPlate(normalized),
-      freightCents: _extractAmountAfterLabels(
-        normalized,
-        const ['运费', '运输费', 'freight'],
-      ),
+      freightCents: _extractAmountAfterLabels(normalized, const [
+        '运费',
+        '运输费',
+        'freight',
+      ]),
       feeAmountsCents: feeAmounts,
     );
   }
@@ -115,7 +129,8 @@ class PastedBillParser {
           caseSensitive: false,
         ).firstMatch(line);
         if (match == null) continue;
-        final value = match.group(1)!
+        final value = match
+            .group(1)!
             .split(
               RegExp(
                 r'\s{2,}|[，,;；|]|\s+(?=(?:柜号|箱号|集装箱号|封条号|封号|铅封号|订舱号|订仓号|订舱单号|日期|车牌号|车牌|运费|运输费|container|seal|booking|date|plate|freight)\s*[:：=])',
