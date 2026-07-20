@@ -5,6 +5,7 @@ import 'package:logistics_ledger/data/database.dart';
 import 'package:logistics_ledger/data/repositories.dart';
 import 'package:logistics_ledger/state/providers.dart';
 import 'package:logistics_ledger/ui/home_page.dart';
+import 'package:logistics_ledger/ui/ledgers/bill_edit_page.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 void main() {
@@ -66,6 +67,43 @@ void main() {
       (await LedgerRepository(database).allLedgers()).single.accountPresetId,
       secondAccount.id,
     );
+  });
+
+  testWidgets('用户可以粘贴文本识别并填入新账单', (tester) async {
+    final database = AppDatabase(
+      databaseFactory: databaseFactoryFfiNoIsolate,
+      databasePath: inMemoryDatabasePath,
+    );
+    await database.init();
+    addTearDown(database.close);
+    await FeePresetRepository(database).add('吊柜费');
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [databaseProvider.overrideWithValue(database)],
+        child: const MaterialApp(home: BillEditPage(ledgerId: 1)),
+      ),
+    );
+
+    await tester.tap(find.byTooltip('粘贴文本识别'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byType(TextField).last,
+      '柜号：CSQU3054383\n封条号：SL001\n订舱号：BK001\n吊柜费：200',
+    );
+    await tester.tap(find.text('识别'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('柜号：CSQU3054383'), findsOneWidget);
+    expect(find.textContaining('吊柜费：200.00 元'), findsOneWidget);
+    await tester.tap(find.text('填入账单'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('CSQU3054383'), findsOneWidget);
+    expect(find.text('SL001'), findsOneWidget);
+    expect(find.text('BK001'), findsOneWidget);
+    expect(find.text('吊柜费'), findsOneWidget);
+    expect(find.text('200.00'), findsOneWidget);
   });
 }
 

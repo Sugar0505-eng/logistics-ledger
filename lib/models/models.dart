@@ -145,6 +145,8 @@ class Bill {
   final int? id;
   final int? ledgerId;
   final String containerNo;
+  final String sealNumber;
+  final String bookingNumber;
   final String date; // yyyy-MM-dd
   final String location;
   final int freightCents;
@@ -155,6 +157,8 @@ class Bill {
     this.id,
     this.ledgerId,
     required this.containerNo,
+    this.sealNumber = '',
+    this.bookingNumber = '',
     required this.date,
     required this.location,
     required this.freightCents,
@@ -171,6 +175,8 @@ class Bill {
   Bill copyWith({
     int? ledgerId,
     String? containerNo,
+    String? sealNumber,
+    String? bookingNumber,
     String? date,
     String? location,
     int? freightCents,
@@ -180,6 +186,8 @@ class Bill {
     id: id,
     ledgerId: ledgerId ?? this.ledgerId,
     containerNo: containerNo ?? this.containerNo,
+    sealNumber: sealNumber ?? this.sealNumber,
+    bookingNumber: bookingNumber ?? this.bookingNumber,
     date: date ?? this.date,
     location: location ?? this.location,
     freightCents: freightCents ?? this.freightCents,
@@ -191,6 +199,8 @@ class Bill {
     'id': id,
     'ledger_id': ledgerId,
     'container_no': containerNo,
+    'seal_number': sealNumber,
+    'booking_number': bookingNumber,
     'date': date,
     'location': location,
     'freight_cents': freightCents,
@@ -204,6 +214,8 @@ class Bill {
     id: m['id'] as int?,
     ledgerId: m['ledger_id'] as int?,
     containerNo: m['container_no'] as String,
+    sealNumber: m['seal_number'] as String? ?? '',
+    bookingNumber: m['booking_number'] as String? ?? '',
     date: m['date'] as String,
     location: m['location'] as String? ?? '',
     freightCents: m['freight_cents'] as int,

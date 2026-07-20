@@ -355,6 +355,9 @@ class LedgerRepository {
     if (bill.ledgerId == null) {
       throw ValidationException('账单必须关联账目记录');
     }
+    if (bill.containerNo.trim().isEmpty) {
+      throw ValidationException('柜号不能为空');
+    }
     if (bill.date.trim().isEmpty) throw ValidationException('日期不能为空');
     if (bill.location.trim().isEmpty) {
       throw ValidationException('地点不能为空');

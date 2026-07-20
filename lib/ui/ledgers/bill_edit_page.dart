@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../models/models.dart';
 import '../../services/money.dart';
 import '../../services/ocr_service.dart';
+import '../../services/pasted_bill_parser.dart';
 import '../../state/providers.dart';
 import '../date_utils.dart';
 import '../fees/fee_preset_picker.dart';
@@ -26,6 +27,8 @@ class _BillEditPageState extends ConsumerState<BillEditPage> {
   final OcrService _ocr = OcrService();
 
   late final TextEditingController _containerCtrl;
+  late final TextEditingController _sealCtrl;
+  late final TextEditingController _bookingCtrl;
   late final TextEditingController _locationCtrl;
   late final TextEditingController _freightCtrl;
   late String _date;
@@ -40,6 +43,8 @@ class _BillEditPageState extends ConsumerState<BillEditPage> {
     super.initState();
     final b = widget.bill;
     _containerCtrl = TextEditingController(text: b?.containerNo ?? '');
+    _sealCtrl = TextEditingController(text: b?.sealNumber ?? '');
+    _bookingCtrl = TextEditingController(text: b?.bookingNumber ?? '');
     _locationCtrl = TextEditingController(text: b?.location ?? '');
     _freightCtrl = TextEditingController(
       text: b == null ? '' : Money.formatCents(b.freightCents),
@@ -61,6 +66,8 @@ class _BillEditPageState extends ConsumerState<BillEditPage> {
   @override
   void dispose() {
     _containerCtrl.dispose();
+    _sealCtrl.dispose();
+    _bookingCtrl.dispose();
     _locationCtrl.dispose();
     _freightCtrl.dispose();
     for (final f in _fees) {
@@ -73,7 +80,17 @@ class _BillEditPageState extends ConsumerState<BillEditPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(_isEdit ? '编辑账单' : '添加账单')),
+      appBar: AppBar(
+        title: Text(_isEdit ? '编辑账单' : '添加账单'),
+        actions: [
+          if (!_isEdit)
+            IconButton(
+              icon: const Icon(Icons.content_paste_search),
+              tooltip: '粘贴文本识别',
+              onPressed: _importFromText,
+            ),
+        ],
+      ),
       body: Form(
         key: _formKey,
         child: ListView(
@@ -113,6 +130,26 @@ class _BillEditPageState extends ConsumerState<BillEditPage> {
                     ),
                   ],
                 ),
+              ),
+              validator: (value) =>
+                  value == null || value.trim().isEmpty ? '请输入柜号' : null,
+            ),
+            const SizedBox(height: 16),
+
+            TextFormField(
+              controller: _sealCtrl,
+              textCapitalization: TextCapitalization.characters,
+              decoration: const InputDecoration(
+                labelText: '封条号（可选）',
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            TextFormField(
+              controller: _bookingCtrl,
+              textCapitalization: TextCapitalization.characters,
+              decoration: const InputDecoration(
+                labelText: '订舱号（可选）',
               ),
             ),
             const SizedBox(height: 16),
@@ -300,6 +337,139 @@ class _BillEditPageState extends ConsumerState<BillEditPage> {
     );
   }
 
+  Future<void> _importFromText() async {
+    final text = await _promptPastedText();
+    if (text == null || text.trim().isEmpty || !mounted) return;
+
+    final presets = await ref.read(feePresetRepoProvider).all();
+    final parsed = PastedBillParser.parse(
+      text,
+      feePresetNames: presets.map((preset) => preset.name),
+    );
+    if (!mounted) return;
+    if (parsed.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('未识别到可填入账单的信息，请检查文本格式')),
+      );
+      return;
+    }
+
+    final confirmed = await _confirmParsedData(parsed);
+    if (confirmed != true || !mounted) return;
+    await _applyParsedData(parsed);
+  }
+
+  Future<String?> _promptPastedText() async {
+    final controller = TextEditingController();
+    try {
+      return await showDialog<String>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          scrollable: true,
+          title: const Text('粘贴账单文本'),
+          content: SizedBox(
+            width: 520,
+            child: TextField(
+              controller: controller,
+              autofocus: true,
+              minLines: 8,
+              maxLines: 14,
+              decoration: const InputDecoration(
+                hintText: '例：柜号 CSQU3054383\n封条号 SL12345\n订舱号 BK98765\n吊柜费 200',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('取消'),
+            ),
+            FilledButton.icon(
+              onPressed: () => Navigator.pop(ctx, controller.text),
+              icon: const Icon(Icons.manage_search),
+              label: const Text('识别'),
+            ),
+          ],
+        ),
+      );
+    } finally {
+      controller.dispose();
+    }
+  }
+
+  Future<bool?> _confirmParsedData(PastedBillData data) {
+    final lines = <String>[
+      if (data.containerNumber != null) '柜号：${data.containerNumber}',
+      if (data.sealNumber != null) '封条号：${data.sealNumber}',
+      if (data.bookingNumber != null) '订舱号：${data.bookingNumber}',
+      if (data.date != null) '日期：${data.date}',
+      if (data.location != null) '地点：${data.location}',
+      if (data.plateNumber != null) '车牌：${data.plateNumber}',
+      if (data.freightCents != null)
+        '运费：${Money.formatCents(data.freightCents!)} 元',
+      for (final entry in data.feeAmountsCents.entries)
+        '${entry.key}：${Money.formatCents(entry.value)} 元',
+    ];
+    return showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('确认识别结果'),
+        content: SingleChildScrollView(child: Text(lines.join('\n'))),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('返回修改'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('填入账单'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _applyParsedData(PastedBillData data) async {
+    if (data.plateNumber != null) {
+      await ref.read(plateRepoProvider).getOrCreate(data.plateNumber!);
+      ref.invalidate(platesProvider);
+    }
+    if (!mounted) return;
+    setState(() {
+      if (data.containerNumber != null) {
+        _containerCtrl.text = data.containerNumber!;
+      }
+      if (data.sealNumber != null) _sealCtrl.text = data.sealNumber!;
+      if (data.bookingNumber != null) {
+        _bookingCtrl.text = data.bookingNumber!;
+      }
+      if (data.date != null) _date = data.date!;
+      if (data.location != null) _locationCtrl.text = data.location!;
+      if (data.plateNumber != null) _plate = data.plateNumber!;
+      if (data.freightCents != null) {
+        _freightCtrl.text = Money.formatCents(data.freightCents!);
+      }
+      for (final entry in data.feeAmountsCents.entries) {
+        final existingIndex = _fees.indexWhere(
+          (fee) => fee.name.toLowerCase() == entry.key.toLowerCase(),
+        );
+        if (existingIndex >= 0) {
+          _fees[existingIndex].amountCtrl.text = Money.formatCents(entry.value);
+        } else {
+          _fees.add(
+            _EditableFee(
+              name: entry.key,
+              amountCtrl: TextEditingController(
+                text: Money.formatCents(entry.value),
+              ),
+            ),
+          );
+        }
+      }
+    });
+  }
+
   Future<void> _runOcr(ImageSource source) async {
     try {
       final result = await _ocr.pickAndRecognize(source);
@@ -347,6 +517,8 @@ class _BillEditPageState extends ConsumerState<BillEditPage> {
       id: widget.bill?.id,
       ledgerId: widget.ledgerId,
       containerNo: _containerCtrl.text.trim().toUpperCase(),
+      sealNumber: _sealCtrl.text.trim().toUpperCase(),
+      bookingNumber: _bookingCtrl.text.trim().toUpperCase(),
       date: _date,
       location: _locationCtrl.text.trim(),
       freightCents: Money.parseToCents(_freightCtrl.text)!,

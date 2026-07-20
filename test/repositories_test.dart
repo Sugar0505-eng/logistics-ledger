@@ -102,6 +102,8 @@ void main() {
       Bill(
         ledgerId: ledger.id,
         containerNo: 'CSQU3054383',
+        sealNumber: 'SL12345',
+        bookingNumber: 'BK98765',
         date: '2026-07-16',
         location: '广州',
         freightCents: 150000,
@@ -117,11 +119,13 @@ void main() {
     expect(bill.id, billId);
     expect(bill.extraFees, hasLength(2));
     expect(bill.location, '广州');
+    expect(bill.sealNumber, 'SL12345');
+    expect(bill.bookingNumber, 'BK98765');
     expect(bill.subtotalCents, 175000);
     expect(await ledgers.billCount(ledger.id!), 1);
   });
 
-  test('柜号不校验，重复费用名仍在写入前被拒绝', () async {
+  test('柜号允许非 ISO 格式，重复费用名仍在写入前被拒绝', () async {
     final ledger = await ledgers.createLedger(
       createdAt: '2026-07-16',
       accountPresetId: defaultAccount.id!,
@@ -150,6 +154,26 @@ void main() {
       throwsA(isA<ValidationException>()),
     );
     expect(await ledgers.billCount(ledger.id!), 1);
+  });
+
+  test('空柜号会在写入前被拒绝', () async {
+    final ledger = await ledgers.createLedger(
+      createdAt: '2026-07-16',
+      accountPresetId: defaultAccount.id!,
+    );
+    expect(
+      () => ledgers.saveBill(
+        Bill(
+          ledgerId: ledger.id,
+          containerNo: ' ',
+          date: '2026-07-16',
+          location: '乐从',
+          freightCents: 10000,
+          plateNumber: '京A12345',
+        ),
+      ),
+      throwsA(isA<ValidationException>()),
+    );
   });
 
   test('删除账目会级联删除账单与额外费用', () async {

@@ -65,6 +65,8 @@ void main() {
 
       expect(bills.single['container_no'], 'OLD001');
       expect(bills.single['location'], '');
+      expect(bills.single['seal_number'], '');
+      expect(bills.single['booking_number'], '');
       expect(ledgers.single['account_preset_id'], isNull);
       expect(presets, isEmpty);
       await upgraded.close();
@@ -88,6 +90,17 @@ void main() {
                 name TEXT,
                 created_at TEXT NOT NULL,
                 status TEXT NOT NULL
+              )
+            ''');
+            await db.execute('''
+              CREATE TABLE bills (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                ledger_id INTEGER NOT NULL,
+                container_no TEXT NOT NULL,
+                date TEXT NOT NULL,
+                location TEXT NOT NULL DEFAULT '',
+                freight_cents INTEGER NOT NULL,
+                plate_number TEXT NOT NULL
               )
             ''');
             await db.execute('''

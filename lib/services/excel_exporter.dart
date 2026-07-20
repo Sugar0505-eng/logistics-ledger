@@ -7,7 +7,14 @@ import '../ui/date_utils.dart';
 class ExcelExporter {
   ExcelExporter._();
 
-  static const List<String> _leadingHeaders = ['日期', '柜号', '地点', '运费'];
+  static const List<String> _leadingHeaders = [
+    '日期',
+    '柜号',
+    '封条号',
+    '订舱号',
+    '地点',
+    '运费',
+  ];
   static const String _totalHeader = '合计';
   static const String _plateHeader = '车牌';
 
@@ -142,18 +149,26 @@ class ExcelExporter {
 
       _writeText(sheet, 0, row, formatChineseDate(bill.date), textStyle);
       _writeText(sheet, 1, row, bill.containerNo, centeredTextStyle);
-      _writeText(sheet, 2, row, bill.location, textStyle);
-      _writeAmount(sheet, 3, row, bill.freightCents, amountStyle);
+      _writeText(sheet, 2, row, bill.sealNumber, centeredTextStyle);
+      _writeText(sheet, 3, row, bill.bookingNumber, centeredTextStyle);
+      _writeText(sheet, 4, row, bill.location, textStyle);
+      _writeAmount(sheet, 5, row, bill.freightCents, amountStyle);
       for (var feeIndex = 0; feeIndex < feeCols.length; feeIndex++) {
         final amount = feeByName[feeCols[feeIndex]];
         if (amount == null) {
           sheet.updateCell(
-            _index(4 + feeIndex, row),
+            _index(_leadingHeaders.length + feeIndex, row),
             null,
             cellStyle: amountStyle,
           );
         } else {
-          _writeAmount(sheet, 4 + feeIndex, row, amount, amountStyle);
+          _writeAmount(
+            sheet,
+            _leadingHeaders.length + feeIndex,
+            row,
+            amount,
+            amountStyle,
+          );
         }
       }
       _writeAmount(sheet, totalColumn, row, bill.subtotalCents, amountStyle);
@@ -198,7 +213,7 @@ class ExcelExporter {
       textStyle,
     );
 
-    final widths = <double>[15, 18, 14, 11];
+    final widths = <double>[15, 18, 16, 18, 14, 11];
     for (var i = 0; i < feeCols.length; i++) {
       widths.add(11);
     }

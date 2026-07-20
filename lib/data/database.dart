@@ -29,7 +29,7 @@ class AppDatabase {
     _db = await factory.openDatabase(
       path,
       options: sqflite.OpenDatabaseOptions(
-        version: 3,
+        version: 4,
         onConfigure: (db) async {
           await db.execute('PRAGMA foreign_keys = ON');
         },
@@ -79,6 +79,8 @@ class AppDatabase {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         ledger_id INTEGER NOT NULL,
         container_no TEXT NOT NULL,
+        seal_number TEXT NOT NULL DEFAULT '',
+        booking_number TEXT NOT NULL DEFAULT '',
         date TEXT NOT NULL,
         location TEXT NOT NULL DEFAULT '',
         freight_cents INTEGER NOT NULL,
@@ -163,6 +165,14 @@ class AppDatabase {
         'CREATE INDEX idx_ledgers_account ON ledgers (account_preset_id)',
       );
       await db.execute('DROP TABLE export_settings');
+    }
+    if (oldVersion < 4) {
+      await db.execute(
+        "ALTER TABLE bills ADD COLUMN seal_number TEXT NOT NULL DEFAULT ''",
+      );
+      await db.execute(
+        "ALTER TABLE bills ADD COLUMN booking_number TEXT NOT NULL DEFAULT ''",
+      );
     }
   }
 

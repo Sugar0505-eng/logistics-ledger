@@ -189,17 +189,22 @@ class _BillTile extends ConsumerWidget {
     final feeSummary = bill.extraFees
         .map((f) => '${f.name}:${Money.formatCents(f.amountCents)}')
         .join('，');
+    final referenceSummary = [
+      if (bill.sealNumber.isNotEmpty) '封条 ${bill.sealNumber}',
+      if (bill.bookingNumber.isNotEmpty) '订舱 ${bill.bookingNumber}',
+    ].join(' · ');
     return ListTile(
       leading: const Icon(Icons.local_shipping),
       title: Text(bill.containerNo),
       subtitle: Text(
         [
           '${formatChineseDate(bill.date)} · ${bill.location} · ${bill.plateNumber}',
+          if (referenceSummary.isNotEmpty) referenceSummary,
           '运费 ${Money.formatCents(bill.freightCents)}',
           if (feeSummary.isNotEmpty) '额外：$feeSummary',
         ].join('\n'),
       ),
-      isThreeLine: feeSummary.isNotEmpty,
+      isThreeLine: feeSummary.isNotEmpty || referenceSummary.isNotEmpty,
       trailing: Text(
         '${Money.formatCents(bill.subtotalCents)} 元',
         style: const TextStyle(fontWeight: FontWeight.bold),

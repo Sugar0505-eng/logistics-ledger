@@ -8,6 +8,8 @@ Flutter 移动端物流账单记录工具。Android 为首要交付平台，数�
 - 账目记录、账单、额外费用三层结构
 - 账目名称编辑与“编辑中/已完成”状态管理
 - Google ML Kit 端上 OCR + ISO 6346 柜号格式和校验码验证
+- 新建账单支持粘贴整段文本，自动识别柜号、封条号、订舱号、日期、地点、车牌、运费及已有费用预设
+- 封条号、订舱号作为可选账单字段保存并导出
 - 额外费用预设，录入时可选择或手动输入
 - 多条公司账户预设，每个账目选择一条用于导出
 - 金额以整数分存储，显示和导出时格式化为两位小数
@@ -52,6 +54,7 @@ lib/
   services/
     money.dart              分/元转换与格式化
     container_number.dart   ISO 6346 提取与校验
+    pasted_bill_parser.dart 粘贴文本的账单字段与费用提取
     excel_exporter.dart     Excel 导出与样式生成
     ocr_service.dart        ML Kit 拍照/选图识别
   state/providers.dart      Riverpod providers

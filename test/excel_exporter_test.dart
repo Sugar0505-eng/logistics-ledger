@@ -7,6 +7,8 @@ void main() {
   final bills = [
     const Bill(
       containerNo: 'MSKU1234567',
+      sealNumber: 'SL001',
+      bookingNumber: 'BK001',
       date: '2026-07-17',
       location: '东涌',
       freightCents: 150000,
@@ -31,6 +33,8 @@ void main() {
     expect(ExcelExporter.headers(bills), [
       '日期',
       '柜号',
+      '封条号',
+      '订舱号',
       '地点',
       '运费',
       '吊柜费',
@@ -54,10 +58,12 @@ void main() {
 
     expect(_text(sheet, 0, 0), '挚盛7月份现金单');
     expect(_text(sheet, 0, 1), '日期');
-    expect(_text(sheet, 8, 1), '车牌');
+    expect(_text(sheet, 10, 1), '车牌');
     expect(_text(sheet, 0, 2), '2026年7月17日');
-    expect(_text(sheet, 2, 2), '东涌');
-    expect(_number(sheet, 7, 4), 3850);
+    expect(_text(sheet, 2, 2), 'SL001');
+    expect(_text(sheet, 3, 2), 'BK001');
+    expect(_text(sheet, 4, 2), '东涌');
+    expect(_number(sheet, 9, 4), 3850);
     expect(_text(sheet, 0, 5), '公司账户：招商银行 6214 0000');
     expect(_text(sheet, 0, 6), '账户名：邓杨');
   });
@@ -85,8 +91,8 @@ void main() {
       ),
     )['Sheet1'];
 
-    expect(_number(sheet, 4, 2), 300);
-    expect(_number(sheet, 5, 2), 1300);
+    expect(_number(sheet, 6, 2), 300);
+    expect(_number(sheet, 7, 2), 1300);
   });
 
   test('导出文件名自动清理非法字符并补充扩展名', () {
